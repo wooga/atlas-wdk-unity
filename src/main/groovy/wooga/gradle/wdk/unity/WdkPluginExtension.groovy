@@ -17,10 +17,16 @@
 
 package wooga.gradle.wdk.unity
 
-import nebula.test.PluginProjectSpec
+interface WdkPluginExtension {
+    AndroidResourceCopyMethod getAndroidResourceCopyMethod()
 
-class WdkUnityPluginActivationSpec extends PluginProjectSpec {
+    void setAndroidResourceCopyMethod(AndroidResourceCopyMethod value)
 
-    @Override
-    String getPluginName() { return 'net.wooga.wdk-unity' }
+    WdkPluginExtension androidResourceCopyMethod(AndroidResourceCopyMethod value)
+
+    File getPluginsDir()
+
+    void setPluginsDir(File reportsDir)
+
+    void setPluginsDir(Object reportsDir)
 }
