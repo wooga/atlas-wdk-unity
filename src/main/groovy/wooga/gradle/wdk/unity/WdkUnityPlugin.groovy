@@ -31,6 +31,8 @@ import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.tasks.Delete
 import org.gradle.internal.reflect.Instantiator
+import wooga.gradle.unity.UnityPlugin
+import wooga.gradle.unity.tasks.AbstractUnityTask
 
 import javax.inject.Inject
 import java.util.concurrent.Callable
@@ -62,13 +64,7 @@ class WdkUnityPlugin implements Plugin<Project> {
         this.project = project
 
         project.pluginManager.apply(BasePlugin.class)
-
-        maybeApplyPlugin("wooga.gradle.unity.UnityPlugin")
-
-        if (!checkUnityPluginCompatibility(project)) {
-            logger.warn("detected incompatible net.wooga.unity plugin")
-            return
-        }
+        project.pluginManager.apply(UnityPlugin.class)
 
         WdkPluginExtension extension = project.extensions.create(EXTENSION_NAME, DefaultWdkPluginExtension, project, fileResolver, instantiator)
         ConventionMapping wdkExtensionMapping = ((IConventionAware) extension).getConventionMapping()
@@ -86,24 +82,7 @@ class WdkUnityPlugin implements Plugin<Project> {
         createExternalResourcesConfigurations()
         configureCleanObjects(extension)
         addResourceCopyTasks(extension)
-    }
-
-    private maybeApplyPlugin(String pluginClassName) {
-        try {
-            Class unityPluginClass = this.class.classLoader.loadClass(pluginClassName)
-            project.pluginManager.apply(unityPluginClass)
-        }
-        catch (ClassNotFoundException _) {
-            logger.info("unity plugin class not available")
-        }
-    }
-
-    static Boolean checkUnityPluginCompatibility(final Project project) {
-        if (project.extensions.findByName("unity")
-                && project.tasks.findByName(ASSEMBLE_RESOURCES_TASK_NAME)) {
-            return false
-        }
-        return true
+        configureUnityTaskDependencies()
     }
 
     private void addLifecycleTasks() {
@@ -222,5 +201,16 @@ class WdkUnityPlugin implements Plugin<Project> {
 
         assembleTask.dependsOn androidResourceCopy
         assembleTask.dependsOn iOSResourceCopy
+    }
+
+    private void configureUnityTaskDependencies() {
+        if (project.pluginManager.hasPlugin("net.wooga.unity")) {
+            project.tasks.withType(AbstractUnityTask, new Action<AbstractUnityTask>() {
+                @Override
+                void execute(AbstractUnityTask task) {
+                    task.dependsOn project.tasks[SETUP_TASK_NAME]
+                }
+            })
+        }
     }
 }

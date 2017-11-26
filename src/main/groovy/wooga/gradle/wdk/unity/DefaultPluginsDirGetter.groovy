@@ -17,16 +17,12 @@
 
 package wooga.gradle.wdk.unity
 
-import org.gradle.api.logging.Logger
-import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.ExtensionContainer
 import wooga.gradle.unity.UnityPluginExtension
 
 import java.util.concurrent.Callable
 
-class DefaultPluginsDirGetter implements Callable<File>{
-
-    static Logger logger = Logging.getLogger(DefaultPluginsDirGetter)
+class DefaultPluginsDirGetter implements Callable<File> {
 
     private ExtensionContainer extensions
 
@@ -36,17 +32,7 @@ class DefaultPluginsDirGetter implements Callable<File>{
 
     @Override
     File call() throws Exception {
-        try {
-            Class unityExtensionClass = this.class.classLoader.loadClass("net.wooga.unity.UnityPluginExtension")
-            UnityPluginExtension unity = extensions.findByType(unityExtensionClass) as UnityPluginExtension
-            if (unity) {
-                return unity.getPluginsDir()
-            }
-        }
-        catch (ClassNotFoundException _) {
-            logger.info("unity plugin not available")
-        }
-
-        return new File("Assets/Plugins")
+        UnityPluginExtension unity = extensions.getByType(UnityPluginExtension)
+        return unity.getPluginsDir()
     }
 }
