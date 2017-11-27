@@ -21,6 +21,7 @@ import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.ConventionMapping
 import org.gradle.api.internal.IConventionAware
 import org.gradle.api.internal.file.FileResolver
@@ -35,6 +36,7 @@ import wooga.gradle.unity.UnityPlugin
 import wooga.gradle.unity.UnityPluginExtension
 import wooga.gradle.unity.tasks.AbstractUnityTask
 import wooga.gradle.unity.tasks.Unity
+import wooga.gradle.unity.tasks.UnityPackage
 import wooga.gradle.wdk.unity.tasks.AndroidResourceCopyAction
 import wooga.gradle.wdk.unity.tasks.DefaultResourceCopyTask
 import wooga.gradle.wdk.unity.tasks.IOSResourceCopyAction
@@ -105,6 +107,7 @@ class WdkUnityPlugin implements Plugin<Project> {
         addResourceCopyTasks()
         configureUnityTaskDependencies()
 
+        configureExportUnityPackage(project, wdk)
         createTestBuildTasks(project, project.tasks)
     }
 
@@ -215,8 +218,19 @@ class WdkUnityPlugin implements Plugin<Project> {
                 performTestBuildTask.dependsOn performTestBuildPlatform
                 cleanTestBuildTask.mustRunAfter performTestBuildPlatform
             }
-
-
         }
+    }
+
+    static def configureExportUnityPackage(final Project project, final WdkPluginExtension wdk) {
+        def exportUnityPackageTask = project.tasks.getByName(UnityPlugin.EXPORT_PACKAGE_TASK_NAME) as UnityPackage
+
+        ConventionMapping exportUnityPackageTaskMapping = exportUnityPackageTask.getConventionMapping()
+
+        exportUnityPackageTaskMapping.map("inputFiles", new Callable<FileCollection>() {
+            @Override
+            FileCollection call() throws Exception {
+                return project.files([wdk.assetsDir])
+            }
+        })
     }
 }

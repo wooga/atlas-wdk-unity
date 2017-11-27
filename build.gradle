@@ -37,5 +37,5 @@ pluginBundle {
 }
 
 dependencies {
-    compile 'gradle.plugin.net.wooga.gradle:atlas-unity:0.16.0-rc.1'
+    compile 'gradle.plugin.net.wooga.gradle:atlas-unity:0.16.0-rc.2'
 }

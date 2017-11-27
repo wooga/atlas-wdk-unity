@@ -18,6 +18,7 @@
 package wooga.gradle.wdk.unity
 
 import spock.lang.Unroll
+import wooga.gradle.unity.UnityPlugin
 
 class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
 
@@ -99,7 +100,30 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "WebGL"   | ["cleanTestBuild", "performTestBuildAndroid", "performTestBuildIOS", "performTestBuildWebGL"]
     }
 
-    def "reconfigures exportUnityPackage"() {
+    @Unroll
+    def "reconfigures :#taskName"() {
+        given: "some files in wdk assets directory"
+        def assetsDir = new File(projectDir, "Assets/Wooga")
+        assetsDir.mkdirs()
 
+        def subDir = new File(assetsDir, "sub")
+        subDir.mkdirs()
+
+        createFile("Test1.cs", assetsDir)
+        createFile("Test2.cs", assetsDir)
+        createFile("Test3.cs", subDir)
+        createFile("Test4.cs", subDir)
+
+        when:
+        def result = runTasksSuccessfully(taskName)
+
+        then:
+        result.wasExecuted(taskName)
+        !result.standardOutput.contains(":${taskName} NO-SOURCE")
+        result.standardOutput.contains("Assets/Wooga")
+
+        where:
+        taskName                             | _
+        UnityPlugin.EXPORT_PACKAGE_TASK_NAME | _
     }
 }
