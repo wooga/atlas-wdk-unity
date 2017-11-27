@@ -20,6 +20,7 @@ package wooga.gradle.wdk.unity
 import nebula.test.ProjectSpec
 import org.gradle.api.DefaultTask
 import spock.lang.Unroll
+import wooga.gradle.wdk.unity.tasks.ResourceCopyTask
 
 class WdkUnityPluginSpec extends ProjectSpec {
 
@@ -52,9 +53,30 @@ class WdkUnityPluginSpec extends ProjectSpec {
         taskType.isInstance(task)
 
         where:
-        taskName                                 | taskType
-        WdkUnityPlugin.ASSEMBLE_RESOURCES_TASK_NAME | DefaultTask
-        WdkUnityPlugin.SETUP_TASK_NAME              | DefaultTask
+        taskName                                            | taskType
+        WdkUnityPlugin.ASSEMBLE_RESOURCES_TASK_NAME         | DefaultTask
+        WdkUnityPlugin.ASSEMBLE_IOS_RESOURCES_TASK_NAME     | ResourceCopyTask
+        WdkUnityPlugin.ASSEMBLE_ANDROID_RESOURCES_TASK_NAME | ResourceCopyTask
+        WdkUnityPlugin.ASSEMBLE_WEBGL_RESOURCES_TASK_NAME   | ResourceCopyTask
+        WdkUnityPlugin.SETUP_TASK_NAME                      | DefaultTask
+    }
+
+    @Unroll
+    def "creates needed configuration #configurationName"() {
+        given:
+        assert !project.configurations.findByName(configurationName)
+
+        when:
+        project.plugins.apply(PLUGIN_NAME)
+
+        then:
+        project.configurations.getByName(configurationName)
+
+        where:
+        configurationName                                   | _
+        WdkUnityPlugin.IOS_RESOURCES_CONFIGURATION_NAME     | _
+        WdkUnityPlugin.ANDROID_RESOURCES_CONFIGURATION_NAME | _
+        WdkUnityPlugin.WEBGL_RESOURCES_CONFIGURATION_NAME   | _
     }
 
     @Unroll

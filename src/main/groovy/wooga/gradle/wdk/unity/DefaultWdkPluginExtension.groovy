@@ -30,6 +30,10 @@ class DefaultWdkPluginExtension implements WdkPluginExtension {
 
     private Factory<File> pluginsDir
 
+    static String IOS_PLUGIN_DIRECTORY = "WebGL"
+    static String ANDROID_PLUGIN_DIRECTORY = "WebGL"
+    static String WEBGL_PLUGIN_DIRECTORY = "WebGL"
+
     DefaultWdkPluginExtension(Project project, FileResolver fileResolver, Instantiator instantiator) {
         this.fileResolver = fileResolver
     }
@@ -67,5 +71,20 @@ class DefaultWdkPluginExtension implements WdkPluginExtension {
     DefaultWdkPluginExtension androidResourceCopyMethod(AndroidResourceCopyMethod value) {
         androidResourceCopyMethod = value
         return this
+    }
+
+    @Override
+    File getIOSResourcePluginDir() {
+        return new File(getPluginsDir(), IOS_PLUGIN_DIRECTORY)
+    }
+
+    @Override
+    File getAndroidResourcePluginDir() {
+        return new File(getPluginsDir(), ANDROID_PLUGIN_DIRECTORY)
+    }
+
+    @Override
+    File getWebGLResourcePluginDir() {
+        return new File(getPluginsDir(), WEBGL_PLUGIN_DIRECTORY)
     }
 }

@@ -15,26 +15,17 @@
  *
  */
 
-package wooga.gradle.wdk.unity
+package wooga.gradle.wdk.unity.tasks
 
-interface WdkPluginExtension {
-    AndroidResourceCopyMethod getAndroidResourceCopyMethod()
+import org.gradle.api.Task
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.internal.IConventionAware
 
-    void setAndroidResourceCopyMethod(AndroidResourceCopyMethod value)
+interface ResourceCopyTask extends Task, IConventionAware {
 
-    WdkPluginExtension androidResourceCopyMethod(AndroidResourceCopyMethod value)
+    Configuration getResources()
 
-    File getPluginsDir()
+    void setResources(Configuration resources)
 
-    void setPluginsDir(File reportsDir)
-
-    void setPluginsDir(Object reportsDir)
-
-    File getIOSResourcePluginDir()
-
-    File getAndroidResourcePluginDir()
-
-    File getWebGLResourcePluginDir()
-
-
+    ResourceCopyTask resources(Configuration resources)
 }

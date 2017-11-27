@@ -27,31 +27,36 @@ class AssembleResourcesIntegrationSpec extends IntegrationSpec {
 
     File iOSResourcebase
     File androidResourcebase
+    File webGlResourcebase
 
     File androidPlugins
     File iOSPlugins
+    File webGlPlugins
 
     def setup() {
         androidPlugins = new File(projectDir, "Assets/Plugins/Android")
         iOSPlugins = new File(projectDir, "Assets/Plugins/iOS")
+        webGlPlugins = new File(projectDir, "Assets/Plugins/WebGL")
 
         def resourcesBase = new File(projectDir, "test/resources")
         iOSResourcebase = new File(resourcesBase, "iOS")
         androidResourcebase = new File(resourcesBase, "android")
+        webGlResourcebase = new File(resourcesBase, "webGl")
 
         iOSResourcebase.mkdirs()
         androidResourcebase.mkdirs()
+        webGlResourcebase.mkdirs()
     }
 
     def createAARPackage(File path) {
         createAARPackage(path, false)
     }
 
-    def createAARPackage(File path, Boolean internalLibraries ) {
+    def createAARPackage(File path, Boolean internalLibraries) {
         ZipOutputStream out = new ZipOutputStream(new FileOutputStream(path))
         out.putNextEntry(new ZipEntry("classes.jar"))
         out.putNextEntry(new ZipEntry("AndroidManifest.xml"))
-        if(internalLibraries) {
+        if (internalLibraries) {
             out.putNextEntry(new ZipEntry("libs/"))
             out.putNextEntry(new ZipEntry("libs/test1.jar"))
             out.putNextEntry(new ZipEntry("libs/test2.jar"))
@@ -116,6 +121,34 @@ class AssembleResourcesIntegrationSpec extends IntegrationSpec {
         iOSPlugins.list()
         iOSPlugins.list().contains('WGTestClass.mm')
         iOSPlugins.list().contains('Test.framework')
+    }
+
+    def "syncs webGL resources when configured"() {
+        given: "a test class to copy"
+        createFile("index.js", webGlResourcebase)
+        createFile("index.css", webGlResourcebase)
+
+        and: "an empty output directory"
+        assert !webGlPlugins.list()
+
+        and: "a build file with artifact dependency to that file"
+        buildFile << """
+            ${applyPlugin(WdkUnityPlugin)}
+
+            dependencies {
+                webgl fileTree(dir: "${webGlResourcebase.path.replace('\\', '/')}")
+            }
+
+        """.stripIndent()
+
+        when: "running the setup task"
+        runTasksSuccessfully(WdkUnityPlugin.SETUP_TASK_NAME)
+
+        then:
+        !androidPlugins.list()
+        webGlPlugins.list()
+        webGlPlugins.list().contains('index.js')
+        webGlPlugins.list().contains('index.css')
     }
 
     def "syncs android resources when configured"() {

@@ -20,9 +20,7 @@ package wooga.gradle.wdk.unity
 import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.file.CopySpec
 import org.gradle.api.internal.ConventionMapping
 import org.gradle.api.internal.IConventionAware
 import org.gradle.api.internal.file.FileResolver
@@ -33,6 +31,11 @@ import org.gradle.api.tasks.Delete
 import org.gradle.internal.reflect.Instantiator
 import wooga.gradle.unity.UnityPlugin
 import wooga.gradle.unity.tasks.AbstractUnityTask
+import wooga.gradle.wdk.unity.tasks.AndroidResourceCopyAction
+import wooga.gradle.wdk.unity.tasks.DefaultResourceCopyTask
+import wooga.gradle.wdk.unity.tasks.IOSResourceCopyAction
+import wooga.gradle.wdk.unity.tasks.ResourceCopyTask
+import wooga.gradle.wdk.unity.tasks.WebGLResourceCopyAction
 
 import javax.inject.Inject
 import java.util.concurrent.Callable
@@ -42,11 +45,15 @@ class WdkUnityPlugin implements Plugin<Project> {
     static Logger logger = Logging.getLogger(WdkUnityPlugin)
 
     static String ASSEMBLE_RESOURCES_TASK_NAME = "assembleResources"
+    static String ASSEMBLE_IOS_RESOURCES_TASK_NAME = "assembleIOSResources"
+    static String ASSEMBLE_ANDROID_RESOURCES_TASK_NAME = "assembleAndroidResources"
+    static String ASSEMBLE_WEBGL_RESOURCES_TASK_NAME = "assembleWebGLResources"
     static String SETUP_TASK_NAME = "setup"
     static String GROUP = "wdk"
     static String EXTENSION_NAME = "wdk"
     static String ANDROID_RESOURCES_CONFIGURATION_NAME = "android"
     static String IOS_RESOURCES_CONFIGURATION_NAME = "ios"
+    static String WEBGL_RESOURCES_CONFIGURATION_NAME = "webgl"
     static String RUNTIME_CONFIGURATION_NAME = "runtime"
 
     private Project project
@@ -81,7 +88,7 @@ class WdkUnityPlugin implements Plugin<Project> {
         addLifecycleTasks()
         createExternalResourcesConfigurations()
         configureCleanObjects(extension)
-        addResourceCopyTasks(extension)
+        addResourceCopyTasks()
         configureUnityTaskDependencies()
     }
 
@@ -101,9 +108,13 @@ class WdkUnityPlugin implements Plugin<Project> {
         iosConfiguration.description = "ios application resources"
         iosConfiguration.transitive = false
 
+        Configuration webglConfiguration = project.configurations.maybeCreate(WEBGL_RESOURCES_CONFIGURATION_NAME)
+        iosConfiguration.description = "webgl application resources"
+        iosConfiguration.transitive = false
+
         Configuration runtimeConfiguration = project.configurations.maybeCreate(RUNTIME_CONFIGURATION_NAME)
         runtimeConfiguration.transitive = true
-        runtimeConfiguration.extendsFrom(androidConfiguration, iosConfiguration)
+        runtimeConfiguration.extendsFrom(androidConfiguration, iosConfiguration, webglConfiguration)
     }
 
     private void configureCleanObjects(final WdkPluginExtension extension) {
@@ -111,96 +122,35 @@ class WdkUnityPlugin implements Plugin<Project> {
 
         cleanTask.delete({ new File(extension.getPluginsDir(), "iOS") })
         cleanTask.delete({ new File(extension.getPluginsDir(), "Android") })
+        cleanTask.delete({ new File(extension.getPluginsDir(), "WebGL") })
     }
 
-    private void addResourceCopyTasks(final WdkPluginExtension extension) {
+    private void addResourceCopyTasks() {
         Configuration androidResources = project.configurations[ANDROID_RESOURCES_CONFIGURATION_NAME]
         Configuration iOSResources = project.configurations[IOS_RESOURCES_CONFIGURATION_NAME]
+        Configuration webglResources = project.configurations[WEBGL_RESOURCES_CONFIGURATION_NAME]
 
         def assembleTask = project.tasks[ASSEMBLE_RESOURCES_TASK_NAME]
 
-        Task iOSResourceCopy = project.tasks.create(name: "assembleIOSResources", group: GROUP)
+        ResourceCopyTask iOSResourceCopy = project.tasks.create(name: "assembleIOSResources", type: DefaultResourceCopyTask) as ResourceCopyTask
         iOSResourceCopy.description = "gathers all additional iOS files into the Plugins/iOS directory of the unity project"
         iOSResourceCopy.dependsOn(iOSResources)
-        iOSResourceCopy.doLast(new Action<Task>() {
-            @Override
-            void execute(Task task) {
-                String collectDir = "${extension.getPluginsDir()}/iOS"
-                def artifacts = iOSResources.resolve()
-                def zipFrameworkArtifacts = artifacts.findAll { it.path =~ /\.framework.zip$/ }
+        iOSResourceCopy.resources = iOSResources
+        iOSResourceCopy.doLast(new IOSResourceCopyAction())
 
-                zipFrameworkArtifacts.each { artifact ->
-                    def artifactName = artifact.name.replace(".zip", "")
-                    project.sync(new Action<CopySpec>() {
-                        @Override
-                        void execute(CopySpec copySpec) {
-                            copySpec.from project.zipTree(artifact)
-                            copySpec.into "$collectDir/$artifactName"
-                        }
-                    })
-                }
-
-                project.copy(new Action<CopySpec>() {
-                    @Override
-                    void execute(CopySpec copySpec) {
-                        copySpec.from iOSResources
-                        copySpec.into "$collectDir"
-                        copySpec.exclude "*.framework"
-                        copySpec.exclude "*.framework.zip"
-                    }
-                })
-            }
-        })
-
-        Task androidResourceCopy = project.tasks.create(name: "assembleAndroidResources", group: GROUP)
+        ResourceCopyTask androidResourceCopy = project.tasks.create(name: "assembleAndroidResources", type: DefaultResourceCopyTask) as ResourceCopyTask
         androidResourceCopy.description = "gathers all *.jar and AndroidManifest.xml files into the Plugins/Android directory of the unity project"
         androidResourceCopy.dependsOn(androidResources)
-        androidResourceCopy.doLast(new Action<Task>() {
-            @Override
-            void execute(Task task) {
-                String collectDir = "${extension.pluginsDir}/Android"
-                if (extension.androidResourceCopyMethod == AndroidResourceCopyMethod.sync) {
-                    project.sync(new Action<CopySpec>() {
-                        @Override
-                        void execute(CopySpec copySpec) {
-                            copySpec.from(androidResources)
-                            copySpec.include '**/*.jar'
-                            copySpec.include '**/*.aar'
-                            copySpec.into collectDir
-                        }
-                    })
-                } else if (extension.androidResourceCopyMethod == AndroidResourceCopyMethod.arrUnpack) {
-                    def artifacts = androidResources.resolve()
-                    def aarArtifacts = artifacts.findAll { it.path =~ /\.aar$/ }
+        androidResourceCopy.resources androidResources
+        androidResourceCopy.doLast(new AndroidResourceCopyAction())
 
-                    aarArtifacts.each { artifact ->
-                        def artifactName = artifact.name.replace(".aar", "")
-                        project.sync(new Action<CopySpec>() {
-                            @Override
-                            void execute(CopySpec copySpec) {
-                                copySpec.from project.zipTree(artifact)
-                                copySpec.into "$collectDir/$artifactName"
-                                copySpec.include 'AndroidManifest.xml'
-                                copySpec.include '**/*.jar'
-                                copySpec.rename(/classes\.jar/, "${artifactName}.jar")
-                            }
-                        })
-                    }
+        ResourceCopyTask webglResourceCopy = project.tasks.create(name: "assembleWebGLResources", type: DefaultResourceCopyTask) as ResourceCopyTask
+        webglResourceCopy.description = "gathers all webgl related files into the Plugins/webGL directory of the unity project"
+        webglResourceCopy.dependsOn(webglResources)
+        webglResourceCopy.resources webglResources
+        webglResourceCopy.doLast(new WebGLResourceCopyAction())
 
-                    project.sync(new Action<CopySpec>() {
-                        @Override
-                        void execute(CopySpec copySpec) {
-                            copySpec.from androidResources
-                            copySpec.into "$collectDir/libs"
-                            copySpec.include '*.jar'
-                        }
-                    })
-                }
-            }
-        })
-
-        assembleTask.dependsOn androidResourceCopy
-        assembleTask.dependsOn iOSResourceCopy
+        assembleTask.dependsOn iOSResourceCopy, androidResourceCopy, webglResourceCopy
     }
 
     private void configureUnityTaskDependencies() {
