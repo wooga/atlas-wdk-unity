@@ -98,4 +98,8 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "IOS"     | ["cleanTestBuild", "performTestBuildAndroid", "performTestBuildIOS", "performTestBuildWebGL"]
         WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "WebGL"   | ["cleanTestBuild", "performTestBuildAndroid", "performTestBuildIOS", "performTestBuildWebGL"]
     }
+
+    def "reconfigures exportUnityPackage"() {
+
+    }
 }

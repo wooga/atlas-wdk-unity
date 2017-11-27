@@ -34,9 +34,9 @@ class AssembleResourcesIntegrationSpec extends IntegrationSpec {
     File webGlPlugins
 
     def setup() {
-        androidPlugins = new File(projectDir, "Assets/Plugins/Android")
-        iOSPlugins = new File(projectDir, "Assets/Plugins/iOS")
-        webGlPlugins = new File(projectDir, "Assets/Plugins/WebGL")
+        androidPlugins = new File(projectDir, "Assets/Wooga/Plugins/Android")
+        iOSPlugins = new File(projectDir, "Assets/Wooga/Plugins/iOS")
+        webGlPlugins = new File(projectDir, "Assets/Wooga/Plugins/WebGL")
 
         def resourcesBase = new File(projectDir, "test/resources")
         iOSResourcebase = new File(resourcesBase, "iOS")
@@ -194,6 +194,42 @@ class AssembleResourcesIntegrationSpec extends IntegrationSpec {
             ${applyPlugin(WdkUnityPlugin)}
 
             wdk.pluginsDir = ${value}"${androidPlugins.path.replace('\\', '/')}"
+            
+            dependencies {
+                android fileTree(dir: "${androidResourcebase.parentFile.path.replace('\\', '/')}")
+            }
+
+        """.stripIndent()
+
+        when: "running the setup task"
+        runTasksSuccessfully(WdkUnityPlugin.SETUP_TASK_NAME)
+
+        then:
+        androidPlugins.list()
+
+        where:
+        type     | value
+        "file"   | "file "
+        "object" | ""
+    }
+
+    @Unroll
+    def "can set assets folder in extension as #type"() {
+        given: "a jar file mock to copy"
+        createFile("WGDeviceInfo.jar", androidResourcebase)
+
+        and: "a custom assets directory"
+        def customAssets = new File(projectDir, "Assets/Test")
+        customAssets.mkdirs()
+
+        androidPlugins = new File(customAssets, "Plugins/Android")
+        androidPlugins.mkdirs()
+
+        and: "a build file with artifact dependency to that file"
+        buildFile << """
+            ${applyPlugin(WdkUnityPlugin)}
+
+            wdk.assetsDir = ${value}"${customAssets.path.replace('\\', '/')}"
             
             dependencies {
                 android fileTree(dir: "${androidResourcebase.parentFile.path.replace('\\', '/')}")

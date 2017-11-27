@@ -17,12 +17,15 @@
 
 package wooga.gradle.wdk.unity
 
+import org.gradle.api.Project
 import org.gradle.api.internal.file.FileResolver
 import org.gradle.internal.Factory
+import wooga.gradle.unity.UnityPluginExtension
 
 class DefaultWdkPluginExtension implements WdkPluginExtension {
 
     private final FileResolver fileResolver
+    private final Project project
 
     private Factory<File> pluginsDir
     private Factory<File> assetsDir
@@ -32,7 +35,8 @@ class DefaultWdkPluginExtension implements WdkPluginExtension {
     static String WEBGL_PLUGIN_DIRECTORY = "WebGL"
     static String PAKET_UNITY_3D_INSTALL_DIRECTORY = "Paket.Unity3D"
 
-    DefaultWdkPluginExtension(FileResolver fileResolver) {
+    DefaultWdkPluginExtension(Project project, FileResolver fileResolver) {
+        this.project = project
         this.fileResolver = fileResolver
     }
 
@@ -91,6 +95,7 @@ class DefaultWdkPluginExtension implements WdkPluginExtension {
 
     @Override
     File getPaketUnity3dInstallDir() {
-        return new File(getAssetsDir(), PAKET_UNITY_3D_INSTALL_DIRECTORY)
+        UnityPluginExtension unity = project.extensions.getByType(UnityPluginExtension)
+        return new File(unity.getAssetsDir(), PAKET_UNITY_3D_INSTALL_DIRECTORY)
     }
 }
