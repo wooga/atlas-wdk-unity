@@ -32,6 +32,7 @@ import org.gradle.api.tasks.TaskContainer
 import org.gradle.internal.reflect.Instantiator
 import org.gradle.language.base.plugins.LifecycleBasePlugin
 import wooga.gradle.unity.UnityPlugin
+import wooga.gradle.unity.UnityPluginExtension
 import wooga.gradle.unity.tasks.AbstractUnityTask
 import wooga.gradle.unity.tasks.Unity
 import wooga.gradle.wdk.unity.tasks.AndroidResourceCopyAction
@@ -79,10 +80,24 @@ class WdkUnityPlugin implements Plugin<Project> {
         project.pluginManager.apply(BasePlugin.class)
         project.pluginManager.apply(UnityPlugin.class)
 
-        WdkPluginExtension extension = project.extensions.create(EXTENSION_NAME, DefaultWdkPluginExtension, project, fileResolver, instantiator)
+        WdkPluginExtension extension = project.extensions.create(EXTENSION_NAME, DefaultWdkPluginExtension, fileResolver)
+        UnityPluginExtension unity = project.extensions.getByType(UnityPluginExtension)
+
         ConventionMapping wdkExtensionMapping = ((IConventionAware) extension).getConventionMapping()
 
-        wdkExtensionMapping.map("pluginsDir", new DefaultPluginsDirGetter(project.extensions))
+        wdkExtensionMapping.map("pluginsDir", new Callable<File>() {
+            @Override
+            File call() throws Exception {
+                return unity.getPluginsDir()
+            }
+        })
+
+        wdkExtensionMapping.map("assetsDir", new Callable<File>() {
+            @Override
+            File call() throws Exception {
+                return unity.getAssetsDir()
+            }
+        })
 
         addLifecycleTasks()
         createExternalResourcesConfigurations()
@@ -121,9 +136,10 @@ class WdkUnityPlugin implements Plugin<Project> {
     private void configureCleanObjects(final WdkPluginExtension extension) {
         Delete cleanTask = (Delete) project.tasks[BasePlugin.CLEAN_TASK_NAME]
 
-        cleanTask.delete({ new File(extension.getPluginsDir(), "iOS") })
-        cleanTask.delete({ new File(extension.getPluginsDir(), "Android") })
-        cleanTask.delete({ new File(extension.getPluginsDir(), "WebGL") })
+        cleanTask.delete({ extension.getIOSResourcePluginDir() })
+        cleanTask.delete({ extension.getAndroidResourcePluginDir() })
+        cleanTask.delete({ extension.getWebGLResourcePluginDir() })
+        cleanTask.delete({ extension.getPaketUnity3dInstallDir() })
     }
 
     private void addResourceCopyTasks() {

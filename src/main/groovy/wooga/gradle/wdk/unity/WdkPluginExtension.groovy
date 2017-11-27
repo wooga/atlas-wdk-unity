@@ -24,11 +24,19 @@ interface WdkPluginExtension {
 
     void setPluginsDir(Object reportsDir)
 
+    File getAssetsDir()
+
+    void setAssetsDir(File reportsDir)
+
+    void setAssetsDir(Object reportsDir)
+
     File getIOSResourcePluginDir()
 
     File getAndroidResourcePluginDir()
 
     File getWebGLResourcePluginDir()
+
+    File getPaketUnity3dInstallDir()
 
 
 }

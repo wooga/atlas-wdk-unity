@@ -252,4 +252,21 @@ class AssembleResourcesIntegrationSpec extends IntegrationSpec {
         where:
         pluginsDir << ["Assets/Plugins", "Assets/Plugins/Custom"]
     }
+
+    def "clean deletes Paket.Unity3d directory"() {
+        given: "a Paket.Unity3D in the assets directory"
+        def unity3dDir = new File(projectDir, "Assets/Paket.Unity3D")
+        unity3dDir.mkdirs()
+
+        and: "a build file with artifact dependency to that file"
+        buildFile << """
+            ${applyPlugin(WdkUnityPlugin)}
+        """.stripIndent()
+
+        when:
+        runTasksSuccessfully('clean')
+
+        then:
+        !unity3dDir.exists()
+    }
 }

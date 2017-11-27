@@ -17,23 +17,42 @@
 
 package wooga.gradle.wdk.unity
 
-import org.gradle.api.Project
 import org.gradle.api.internal.file.FileResolver
 import org.gradle.internal.Factory
-import org.gradle.internal.reflect.Instantiator
 
 class DefaultWdkPluginExtension implements WdkPluginExtension {
 
     private final FileResolver fileResolver
 
     private Factory<File> pluginsDir
+    private Factory<File> assetsDir
 
     static String IOS_PLUGIN_DIRECTORY = "iOS"
     static String ANDROID_PLUGIN_DIRECTORY = "Android"
     static String WEBGL_PLUGIN_DIRECTORY = "WebGL"
+    static String PAKET_UNITY_3D_INSTALL_DIRECTORY = "Paket.Unity3D"
 
-    DefaultWdkPluginExtension(Project project, FileResolver fileResolver, Instantiator instantiator) {
+    DefaultWdkPluginExtension(FileResolver fileResolver) {
         this.fileResolver = fileResolver
+    }
+
+    @Override
+    File getAssetsDir() {
+        if (assetsDir) {
+            return assetsDir.create()
+        }
+
+        return null
+    }
+
+    @Override
+    void setAssetsDir(File path) {
+        assetsDir = fileResolver.resolveLater(path)
+    }
+
+    @Override
+    void setAssetsDir(Object path) {
+        assetsDir = fileResolver.resolveLater(path)
     }
 
     @Override
@@ -68,5 +87,10 @@ class DefaultWdkPluginExtension implements WdkPluginExtension {
     @Override
     File getWebGLResourcePluginDir() {
         return new File(getPluginsDir(), WEBGL_PLUGIN_DIRECTORY)
+    }
+
+    @Override
+    File getPaketUnity3dInstallDir() {
+        return new File(getAssetsDir(), PAKET_UNITY_3D_INSTALL_DIRECTORY)
     }
 }
