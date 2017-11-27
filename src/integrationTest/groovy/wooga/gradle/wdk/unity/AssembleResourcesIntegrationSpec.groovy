@@ -181,78 +181,8 @@ class AssembleResourcesIntegrationSpec extends IntegrationSpec {
         androidPlugins.list().contains('WGDeviceInfo.aar')
     }
 
-    def "syncs android resources and unpacks aars"() {
-        given: "a jar file mock to copy"
-        createFile("WGDeviceInfo.jar", androidResourcebase)
-
-        and: "a test aar package"
-        createAARPackage(createFile("WGDeviceInfo.aar", androidResourcebase))
-
-        and: "an empty output directory"
-        assert !androidPlugins.list()
-
-        and: "a build file with artifact dependency to that file"
-        buildFile << """
-            ${applyPlugin(WdkUnityPlugin)}
-
-            wdk.androidResourceCopyMethod = "arrUnpack"
-            
-            dependencies {
-                android fileTree(dir: "${androidResourcebase.path.replace('\\', '/')}")
-            }
-
-        """.stripIndent()
-
-        when: "running the setup task"
-        runTasksSuccessfully(WdkUnityPlugin.SETUP_TASK_NAME)
-
-        then:
-        def unpackedAARDir = new File(androidPlugins, "WGDeviceInfo")
-        def libsDir = new File(androidPlugins, "libs")
-
-        !iOSPlugins.list()
-        androidPlugins.list()
-        unpackedAARDir.exists()
-        unpackedAARDir.list().contains("WGDeviceInfo.jar")
-        unpackedAARDir.list().contains("AndroidManifest.xml")
-        libsDir.exists()
-        libsDir.list().contains("WGDeviceInfo.jar")
-    }
-
-    def "syncs android resources and unpacks aars with internal libraries"() {
-        given: "a test aar package"
-        createAARPackage(createFile("WGDeviceInfo.aar", androidResourcebase), true)
-
-        and: "an empty output directory"
-        assert !androidPlugins.list()
-
-        and: "a build file with artifact dependency to that file"
-        buildFile << """
-            ${applyPlugin(WdkUnityPlugin)}
-
-            wdk.androidResourceCopyMethod = "arrUnpack"
-            
-            dependencies {
-                android fileTree(dir: "${androidResourcebase.path.replace('\\', '/')}")
-            }
-
-        """.stripIndent()
-
-        when: "running the setup task"
-        runTasksSuccessfully(WdkUnityPlugin.SETUP_TASK_NAME)
-
-        then:
-        def unpackedAARDir = new File(androidPlugins, "WGDeviceInfo")
-        def libsDir = new File(unpackedAARDir, "libs")
-
-        androidPlugins.list()
-        unpackedAARDir.exists()
-        libsDir.exists()
-        libsDir.list().contains("test1.jar")
-        libsDir.list().contains("test2.jar")
-    }
-
-    def "can set plugins folder in extension"() {
+    @Unroll
+    def "can set plugins folder in extension as #type"() {
         given: "a jar file mock to copy"
         createFile("WGDeviceInfo.jar", androidResourcebase)
 
@@ -263,7 +193,7 @@ class AssembleResourcesIntegrationSpec extends IntegrationSpec {
         buildFile << """
             ${applyPlugin(WdkUnityPlugin)}
 
-            wdk.pluginsDir = "${androidPlugins.path.replace('\\', '/')}"
+            wdk.pluginsDir = ${value}"${androidPlugins.path.replace('\\', '/')}"
             
             dependencies {
                 android fileTree(dir: "${androidResourcebase.parentFile.path.replace('\\', '/')}")
@@ -276,6 +206,11 @@ class AssembleResourcesIntegrationSpec extends IntegrationSpec {
 
         then:
         androidPlugins.list()
+
+        where:
+        type     | value
+        "file"   | "file "
+        "object" | ""
     }
 
     @Unroll()

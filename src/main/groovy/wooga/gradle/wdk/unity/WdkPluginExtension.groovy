@@ -18,12 +18,6 @@
 package wooga.gradle.wdk.unity
 
 interface WdkPluginExtension {
-    AndroidResourceCopyMethod getAndroidResourceCopyMethod()
-
-    void setAndroidResourceCopyMethod(AndroidResourceCopyMethod value)
-
-    WdkPluginExtension androidResourceCopyMethod(AndroidResourceCopyMethod value)
-
     File getPluginsDir()
 
     void setPluginsDir(File reportsDir)

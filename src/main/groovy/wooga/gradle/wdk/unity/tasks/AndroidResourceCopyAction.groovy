@@ -21,7 +21,6 @@ import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.CopySpec
-import wooga.gradle.wdk.unity.AndroidResourceCopyMethod
 import wooga.gradle.wdk.unity.WdkPluginExtension
 
 class AndroidResourceCopyAction extends ResourceCopyAction {
@@ -31,42 +30,14 @@ class AndroidResourceCopyAction extends ResourceCopyAction {
         File collectDir = extension.getAndroidResourcePluginDir()
         collectDir.mkdirs()
 
-        if (extension.androidResourceCopyMethod == AndroidResourceCopyMethod.sync) {
-            project.sync(new Action<CopySpec>() {
-                @Override
-                void execute(CopySpec copySpec) {
-                    copySpec.from(resources)
-                    copySpec.include '**/*.jar'
-                    copySpec.include '**/*.aar'
-                    copySpec.into collectDir
-                }
-            })
-        } else if (extension.androidResourceCopyMethod == AndroidResourceCopyMethod.arrUnpack) {
-            def artifacts = resources.resolve()
-            def aarArtifacts = artifacts.findAll { it.path =~ /\.aar$/ }
-
-            aarArtifacts.each { artifact ->
-                def artifactName = artifact.name.replace(".aar", "")
-                project.sync(new Action<CopySpec>() {
-                    @Override
-                    void execute(CopySpec copySpec) {
-                        copySpec.from project.zipTree(artifact)
-                        copySpec.into "$collectDir/$artifactName"
-                        copySpec.include 'AndroidManifest.xml'
-                        copySpec.include '**/*.jar'
-                        copySpec.rename(/classes\.jar/, "${artifactName}.jar")
-                    }
-                })
+        project.sync(new Action<CopySpec>() {
+            @Override
+            void execute(CopySpec copySpec) {
+                copySpec.from(resources)
+                copySpec.include '**/*.jar'
+                copySpec.include '**/*.aar'
+                copySpec.into collectDir
             }
-
-            project.sync(new Action<CopySpec>() {
-                @Override
-                void execute(CopySpec copySpec) {
-                    copySpec.from resources
-                    copySpec.into "$collectDir/libs"
-                    copySpec.include '*.jar'
-                }
-            })
-        }
+        })
     }
 }

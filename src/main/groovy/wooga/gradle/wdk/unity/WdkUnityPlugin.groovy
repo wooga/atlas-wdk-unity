@@ -84,13 +84,6 @@ class WdkUnityPlugin implements Plugin<Project> {
 
         wdkExtensionMapping.map("pluginsDir", new DefaultPluginsDirGetter(project.extensions))
 
-        wdkExtensionMapping.map("androidResourceCopyMethod", new Callable<AndroidResourceCopyMethod>() {
-            @Override
-            AndroidResourceCopyMethod call() {
-                return AndroidResourceCopyMethod.sync
-            }
-        })
-
         addLifecycleTasks()
         createExternalResourcesConfigurations()
         configureCleanObjects(extension)

@@ -24,8 +24,6 @@ import org.gradle.internal.reflect.Instantiator
 
 class DefaultWdkPluginExtension implements WdkPluginExtension {
 
-    private AndroidResourceCopyMethod androidResourceCopyMethod
-
     private final FileResolver fileResolver
 
     private Factory<File> pluginsDir
@@ -55,22 +53,6 @@ class DefaultWdkPluginExtension implements WdkPluginExtension {
     @Override
     void setPluginsDir(Object reportsDir) {
         pluginsDir = fileResolver.resolveLater(reportsDir)
-    }
-
-    @Override
-    AndroidResourceCopyMethod getAndroidResourceCopyMethod() {
-        return androidResourceCopyMethod
-    }
-
-    @Override
-    void setAndroidResourceCopyMethod(AndroidResourceCopyMethod value) {
-        androidResourceCopyMethod = value
-    }
-
-    @Override
-    DefaultWdkPluginExtension androidResourceCopyMethod(AndroidResourceCopyMethod value) {
-        androidResourceCopyMethod = value
-        return this
     }
 
     @Override
