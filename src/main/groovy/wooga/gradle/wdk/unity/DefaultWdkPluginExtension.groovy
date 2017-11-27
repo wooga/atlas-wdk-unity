@@ -103,12 +103,12 @@ class DefaultWdkPluginExtension implements WdkPluginExtension {
     }
 
     @Override
-    List<String> getEditorDependeciesToMoveDuringTestBuild() {
+    List<String> getEditorDependenciesToMoveDuringTestBuild() {
         return editorDependeciesToMoveDuringTestBuild
     }
 
     @Override
-    WdkPluginExtension editorDependeciesToMoveDuringTestBuild(String... dependencies) {
+    WdkPluginExtension editorDependenciesToMoveDuringTestBuild(String... dependencies) {
         if (dependencies == null) {
             throw new IllegalArgumentException("dependencies == null!")
         }
@@ -117,13 +117,13 @@ class DefaultWdkPluginExtension implements WdkPluginExtension {
     }
 
     @Override
-    WdkPluginExtension editorDependeciesToMoveDuringTestBuild(Iterable<String> dependencies) {
+    WdkPluginExtension editorDependenciesToMoveDuringTestBuild(Iterable<String> dependencies) {
         GUtil.addToCollection(editorDependeciesToMoveDuringTestBuild, dependencies)
         return this
     }
 
     @Override
-    void setEditorDependeciesToMoveDuringTestBuild(Iterable<String> dependencies) {
+    void setEditorDependenciesToMoveDuringTestBuild(Iterable<String> dependencies) {
         editorDependeciesToMoveDuringTestBuild.clear()
         editorDependeciesToMoveDuringTestBuild.addAll(dependencies)
     }

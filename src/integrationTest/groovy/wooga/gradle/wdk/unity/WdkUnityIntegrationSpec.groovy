@@ -147,7 +147,7 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         def paketInstallDirectory = new File(projectDir, "Assets/Paket.Unity3D")
         paketInstallDirectory.mkdirs()
 
-        def sourceDir = new File(paketInstallDirectory, "Dependency1")
+        def sourceDir = new File(paketInstallDirectory, name)
         sourceDir.mkdirs()
         def testFile = createFile("Test.cs", sourceDir)
 
@@ -180,8 +180,38 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
 
         where:
         name          | setInstruction
-        "Dependency1" | "wdk.editorDependeciesToMoveDuringTestBuild(['Dependency1'])"
-        "Dependency1" | "wdk.editorDependeciesToMoveDuringTestBuild('Dependency1')"
-        "Dependency1" | "wdk.editorDependeciesToMoveDuringTestBuild = ['Dependency1']"
+        "Dependency1" | "wdk.editorDependenciesToMoveDuringTestBuild(['Dependency1'])"
+        "Dependency1" | "wdk.editorDependenciesToMoveDuringTestBuild('Dependency1')"
+        "Dependency1" | "wdk.editorDependenciesToMoveDuringTestBuild = ['Dependency1']"
+    }
+
+    def "fails set of custom dependencies when value is null"() {
+        given: "a paket.unity3d.references file with 'Wooga.AtlasBuildTools'"
+        def reference = createFile("paket.unity3d.references")
+        reference << """
+        Wooga.AtlasBuildTools
+        """.stripIndent()
+
+        and: "some assets in paket install directory"
+        def paketInstallDirectory = new File(projectDir, "Assets/Paket.Unity3D")
+        paketInstallDirectory.mkdirs()
+
+        def sourceDir = new File(paketInstallDirectory, "Dependency1")
+        sourceDir.mkdirs()
+        def testFile = createFile("Test.cs", sourceDir)
+
+        and: "a future directory where files are moved to"
+        def destinatonDir = new File(sourceDir, "Editor")
+        assert !destinatonDir.exists()
+
+        and: "dependencies to be moved configured"
+        buildFile << """
+        
+        wdk.editorDependenciesToMoveDuringTestBuild(null)
+        
+        """.stripIndent()
+
+        expect:
+        runTasksWithFailure(WdkUnityPlugin.MOVE_EDITOR_DEPENDENCIES)
     }
 }

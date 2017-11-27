@@ -105,7 +105,7 @@ class WdkUnityPlugin implements Plugin<Project> {
             }
         })
 
-        wdk.editorDependeciesToMoveDuringTestBuild("NSubstitute")
+        wdk.editorDependenciesToMoveDuringTestBuild("NSubstitute")
 
         addLifecycleTasks()
         createExternalResourcesConfigurations()
@@ -208,7 +208,7 @@ class WdkUnityPlugin implements Plugin<Project> {
                     @Override
                     void execute(Task task) {
                         def paketUnitydir = wdk.getPaketUnity3dInstallDir().path
-                        wdk.editorDependeciesToMoveDuringTestBuild.each {
+                        wdk.editorDependenciesToMoveDuringTestBuild.each {
                             def fileToMove = new File(paketUnitydir, it)
                             def destination = new File(paketUnitydir, "${it}/Editor")
 
@@ -232,7 +232,7 @@ class WdkUnityPlugin implements Plugin<Project> {
                     @Override
                     void execute(Task task) {
                         def paketUnitydir = wdk.getPaketUnity3dInstallDir().path
-                        wdk.editorDependeciesToMoveDuringTestBuild.each {
+                        wdk.editorDependenciesToMoveDuringTestBuild.each {
                             def fileToMove = new File(paketUnitydir, "${it}/Editor")
                             def destination = new File(paketUnitydir, it)
                             def tempDir = File.createTempDir()
