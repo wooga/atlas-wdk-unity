@@ -38,5 +38,11 @@ interface WdkPluginExtension {
 
     File getPaketUnity3dInstallDir()
 
+    List<String> getEditorDependeciesToMoveDuringTestBuild()
 
+    WdkPluginExtension editorDependeciesToMoveDuringTestBuild(String... var1)
+
+    WdkPluginExtension editorDependeciesToMoveDuringTestBuild(Iterable<String> var1)
+
+    void setEditorDependeciesToMoveDuringTestBuild(Iterable<String> dependencies)
 }

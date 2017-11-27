@@ -48,6 +48,8 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         then:
         result.wasExecuted(WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME)
         result.wasExecuted(WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME)
+        result.wasExecuted(WdkUnityPlugin.MOVE_EDITOR_DEPENDENCIES)
+        result.wasExecuted(WdkUnityPlugin.UN_MOVE_EDITOR_DEPENDENCIES)
         result.wasExecuted(WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "Android")
         result.wasExecuted(WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "IOS")
         result.wasExecuted(WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "WebGL")
@@ -91,13 +93,19 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         result.standardOutput.indexOf(":$taskA ") > result.standardOutput.indexOf(":$taskB ")
 
         where:
-        taskA                                     | taskB                                                   | execute
-        WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "Android" | ["check"]
-        WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "IOS"     | ["check"]
-        WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "WebGL"   | ["check"]
-        WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "Android" | ["cleanTestBuild", "performTestBuildAndroid", "performTestBuildIOS", "performTestBuildWebGL"]
-        WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "IOS"     | ["cleanTestBuild", "performTestBuildAndroid", "performTestBuildIOS", "performTestBuildWebGL"]
-        WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "WebGL"   | ["cleanTestBuild", "performTestBuildAndroid", "performTestBuildIOS", "performTestBuildWebGL"]
+        taskA                                                   | taskB                                                   | execute
+        WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME               | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "Android" | ["check"]
+        WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME               | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "IOS"     | ["check"]
+        WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME               | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "WebGL"   | ["check"]
+        WdkUnityPlugin.UN_MOVE_EDITOR_DEPENDENCIES              | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "Android" | ["check"]
+        WdkUnityPlugin.UN_MOVE_EDITOR_DEPENDENCIES              | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "IOS"     | ["check"]
+        WdkUnityPlugin.UN_MOVE_EDITOR_DEPENDENCIES              | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "WebGL"   | ["check"]
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "WebGL"   | WdkUnityPlugin.MOVE_EDITOR_DEPENDENCIES                 | ["check"]
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "Android" | WdkUnityPlugin.MOVE_EDITOR_DEPENDENCIES                 | ["check"]
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "IOS"     | WdkUnityPlugin.MOVE_EDITOR_DEPENDENCIES                 | ["check"]
+        WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME               | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "Android" | ["cleanTestBuild", "performTestBuildAndroid", "performTestBuildIOS", "performTestBuildWebGL"]
+        WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME               | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "IOS"     | ["cleanTestBuild", "performTestBuildAndroid", "performTestBuildIOS", "performTestBuildWebGL"]
+        WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME               | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "WebGL"   | ["cleanTestBuild", "performTestBuildAndroid", "performTestBuildIOS", "performTestBuildWebGL"]
     }
 
     @Unroll
@@ -125,5 +133,55 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         where:
         taskName                             | _
         UnityPlugin.EXPORT_PACKAGE_TASK_NAME | _
+    }
+
+    @Unroll
+    def "can set custom dependencies to move with #setInstruction"() {
+        given: "a paket.unity3d.references file with 'Wooga.AtlasBuildTools'"
+        def reference = createFile("paket.unity3d.references")
+        reference << """
+        Wooga.AtlasBuildTools
+        """.stripIndent()
+
+        and: "some assets in paket install directory"
+        def paketInstallDirectory = new File(projectDir, "Assets/Paket.Unity3D")
+        paketInstallDirectory.mkdirs()
+
+        def sourceDir = new File(paketInstallDirectory, "Dependency1")
+        sourceDir.mkdirs()
+        def testFile = createFile("Test.cs", sourceDir)
+
+        and: "a future directory where files are moved to"
+        def destinatonDir = new File(sourceDir, "Editor")
+        assert !destinatonDir.exists()
+
+        and: "dependencies to be moved configured"
+        buildFile << """
+        
+        $setInstruction 
+        
+        """.stripIndent()
+
+
+        when:
+        runTasksSuccessfully(WdkUnityPlugin.MOVE_EDITOR_DEPENDENCIES)
+
+        then:
+        destinatonDir.exists()
+        !sourceDir.list().contains(testFile.name)
+        destinatonDir.list().contains(testFile.name)
+
+        when:
+        runTasksSuccessfully(WdkUnityPlugin.UN_MOVE_EDITOR_DEPENDENCIES)
+
+        then:
+        !destinatonDir.exists()
+        sourceDir.list().contains(testFile.name)
+
+        where:
+        name          | setInstruction
+        "Dependency1" | "wdk.editorDependeciesToMoveDuringTestBuild(['Dependency1'])"
+        "Dependency1" | "wdk.editorDependeciesToMoveDuringTestBuild('Dependency1')"
+        "Dependency1" | "wdk.editorDependeciesToMoveDuringTestBuild = ['Dependency1']"
     }
 }

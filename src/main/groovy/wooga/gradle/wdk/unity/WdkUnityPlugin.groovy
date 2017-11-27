@@ -20,6 +20,7 @@ package wooga.gradle.wdk.unity
 import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.ConventionMapping
@@ -64,6 +65,9 @@ class WdkUnityPlugin implements Plugin<Project> {
 
     static String PERFORM_TEST_BUILD_TASK_NAME = "performTestBuild"
     static String CLEAN_TEST_BUILD_TASK_NAME = "cleanTestBuild"
+    static String MOVE_EDITOR_DEPENDENCIES = "moveEditorDependencies"
+    static String UN_MOVE_EDITOR_DEPENDENCIES = "unMoveEditorDependencies"
+
 
     private Project project
     private final FileResolver fileResolver
@@ -101,6 +105,8 @@ class WdkUnityPlugin implements Plugin<Project> {
             }
         })
 
+        wdk.editorDependeciesToMoveDuringTestBuild("NSubstitute")
+
         addLifecycleTasks()
         createExternalResourcesConfigurations()
         configureCleanObjects(wdk)
@@ -108,7 +114,7 @@ class WdkUnityPlugin implements Plugin<Project> {
         configureUnityTaskDependencies()
 
         configureExportUnityPackage(project, wdk)
-        createTestBuildTasks(project, project.tasks)
+        createTestBuildTasks(project, project.tasks, wdk)
     }
 
     private void addLifecycleTasks() {
@@ -184,7 +190,7 @@ class WdkUnityPlugin implements Plugin<Project> {
         }
     }
 
-    static void createTestBuildTasks(Project project, TaskContainer tasks) {
+    static void createTestBuildTasks(final Project project, final TaskContainer tasks, final WdkPluginExtension wdk) {
         File paketUnity3DReferences = project.file("paket.unity3d.references")
 
         if (paketUnity3DReferences.exists() && paketUnity3DReferences.text.contains("Wooga.AtlasBuildTools")) {
@@ -195,6 +201,54 @@ class WdkUnityPlugin implements Plugin<Project> {
                 group = GROUP
             }
 
+            def moveEditorDependencies = tasks.create(MOVE_EDITOR_DEPENDENCIES)
+            moveEditorDependencies.with {
+                description = "moves some editor only dependencies for test builds"
+                doLast(new Action<Task>() {
+                    @Override
+                    void execute(Task task) {
+                        def paketUnitydir = wdk.getPaketUnity3dInstallDir().path
+                        wdk.editorDependeciesToMoveDuringTestBuild.each {
+                            def fileToMove = new File(paketUnitydir, it)
+                            def destination = new File(paketUnitydir, "${it}/Editor")
+
+                            if (fileToMove.exists()) {
+                                project.ant.move(file: fileToMove, tofile: destination)
+                            } else {
+                                logger.info("$fileToMove does not exist")
+                            }
+                        }
+                    }
+                })
+            }
+
+            moveEditorDependencies.mustRunAfter()
+
+            def unMoveEditorDependecies = tasks.create(UN_MOVE_EDITOR_DEPENDENCIES)
+            unMoveEditorDependecies.with {
+                description = "moves some editor only dependencies back to old location"
+                dependsOn moveEditorDependencies
+                doLast(new Action<Task>() {
+                    @Override
+                    void execute(Task task) {
+                        def paketUnitydir = wdk.getPaketUnity3dInstallDir().path
+                        wdk.editorDependeciesToMoveDuringTestBuild.each {
+                            def fileToMove = new File(paketUnitydir, "${it}/Editor")
+                            def destination = new File(paketUnitydir, it)
+                            def tempDir = File.createTempDir()
+
+                            if (fileToMove.exists()) {
+                                project.ant.move(file: fileToMove, tofile: tempDir)
+                                project.ant.move(file: new File(tempDir, "Editor"), tofile: destination)
+                            } else {
+                                logger.info("$fileToMove does not exist")
+                            }
+                        }
+                    }
+                })
+            }
+
+            performTestBuildTask.dependsOn unMoveEditorDependecies
             checkTask.dependsOn performTestBuildTask
 
             def cleanTestBuildTask = tasks.create(name: CLEAN_TEST_BUILD_TASK_NAME, type: Unity) as Unity
@@ -212,11 +266,14 @@ class WdkUnityPlugin implements Plugin<Project> {
                 performTestBuildPlatform.with {
                     args "-executeMethod", "Wooga.Atlas.BuildTools.BuildFromEditor.BuildTest${platform}"
                     description = "Build test project for ${platform}"
-
                 }
 
                 performTestBuildTask.dependsOn performTestBuildPlatform
                 cleanTestBuildTask.mustRunAfter performTestBuildPlatform
+
+                performTestBuildTask.mustRunAfter moveEditorDependencies
+                moveEditorDependencies.mustRunAfter performTestBuildPlatform.dependsOn
+                unMoveEditorDependecies.mustRunAfter performTestBuildPlatform
             }
         }
     }

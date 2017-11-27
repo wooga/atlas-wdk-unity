@@ -46,12 +46,14 @@ class WdkTestBuildSpec extends ProjectSpec {
         taskType.isInstance(task)
 
         where:
-        taskName                  | taskType
-        "performTestBuild"        | DefaultTask
-        "cleanTestBuild"          | Unity
-        "performTestBuildIOS"     | Unity
-        "performTestBuildAndroid" | Unity
-        "performTestBuildWebGL"   | Unity
+        taskName                                                | taskType
+        WdkUnityPlugin.MOVE_EDITOR_DEPENDENCIES                 | DefaultTask
+        WdkUnityPlugin.UN_MOVE_EDITOR_DEPENDENCIES              | DefaultTask
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME             | DefaultTask
+        WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME               | Unity
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "IOS"     | Unity
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "Android" | Unity
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "WebGL"   | Unity
     }
 
     @Unroll
@@ -68,12 +70,14 @@ class WdkTestBuildSpec extends ProjectSpec {
         !project.tasks.findByName(taskName)
 
         where:
-        taskName                  | _
-        "performTestBuild"        | _
-        "cleanTestBuild"          | _
-        "performTestBuildIOS"     | _
-        "performTestBuildAndroid" | _
-        "performTestBuildWebGL"   | _
+        taskName                                                | _
+        WdkUnityPlugin.MOVE_EDITOR_DEPENDENCIES                 | _
+        WdkUnityPlugin.UN_MOVE_EDITOR_DEPENDENCIES              | _
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME             | _
+        WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME               | _
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "IOS"     | _
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "Android" | _
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "WebGL"   | _
     }
 
     @Unroll
@@ -85,12 +89,14 @@ class WdkTestBuildSpec extends ProjectSpec {
         !project.tasks.findByName(taskName)
 
         where:
-        taskName                  | _
-        "performTestBuild"        | _
-        "cleanTestBuild"          | _
-        "performTestBuildIOS"     | _
-        "performTestBuildAndroid" | _
-        "performTestBuildWebGL"   | _
+        taskName                                                | _
+        WdkUnityPlugin.MOVE_EDITOR_DEPENDENCIES                 | _
+        WdkUnityPlugin.UN_MOVE_EDITOR_DEPENDENCIES              | _
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME             | _
+        WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME               | _
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "IOS"     | _
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "Android" | _
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "WebGL"   | _
     }
 
 }

@@ -20,6 +20,7 @@ package wooga.gradle.wdk.unity
 import org.gradle.api.Project
 import org.gradle.api.internal.file.FileResolver
 import org.gradle.internal.Factory
+import org.gradle.util.GUtil
 import wooga.gradle.unity.UnityPluginExtension
 
 class DefaultWdkPluginExtension implements WdkPluginExtension {
@@ -29,6 +30,8 @@ class DefaultWdkPluginExtension implements WdkPluginExtension {
 
     private Factory<File> pluginsDir
     private Factory<File> assetsDir
+
+    private final List<String> editorDependeciesToMoveDuringTestBuild = new ArrayList<String>()
 
     static String IOS_PLUGIN_DIRECTORY = "iOS"
     static String ANDROID_PLUGIN_DIRECTORY = "Android"
@@ -97,5 +100,31 @@ class DefaultWdkPluginExtension implements WdkPluginExtension {
     File getPaketUnity3dInstallDir() {
         UnityPluginExtension unity = project.extensions.getByType(UnityPluginExtension)
         return new File(unity.getAssetsDir(), PAKET_UNITY_3D_INSTALL_DIRECTORY)
+    }
+
+    @Override
+    List<String> getEditorDependeciesToMoveDuringTestBuild() {
+        return editorDependeciesToMoveDuringTestBuild
+    }
+
+    @Override
+    WdkPluginExtension editorDependeciesToMoveDuringTestBuild(String... dependencies) {
+        if (dependencies == null) {
+            throw new IllegalArgumentException("dependencies == null!")
+        }
+        editorDependeciesToMoveDuringTestBuild.addAll(Arrays.asList(dependencies))
+        return this
+    }
+
+    @Override
+    WdkPluginExtension editorDependeciesToMoveDuringTestBuild(Iterable<String> dependencies) {
+        GUtil.addToCollection(editorDependeciesToMoveDuringTestBuild, dependencies)
+        return this
+    }
+
+    @Override
+    void setEditorDependeciesToMoveDuringTestBuild(Iterable<String> dependencies) {
+        editorDependeciesToMoveDuringTestBuild.clear()
+        editorDependeciesToMoveDuringTestBuild.addAll(dependencies)
     }
 }
