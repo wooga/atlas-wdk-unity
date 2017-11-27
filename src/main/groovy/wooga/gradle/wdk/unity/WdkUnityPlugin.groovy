@@ -28,9 +28,12 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.TaskContainer
 import org.gradle.internal.reflect.Instantiator
+import org.gradle.language.base.plugins.LifecycleBasePlugin
 import wooga.gradle.unity.UnityPlugin
 import wooga.gradle.unity.tasks.AbstractUnityTask
+import wooga.gradle.unity.tasks.Unity
 import wooga.gradle.wdk.unity.tasks.AndroidResourceCopyAction
 import wooga.gradle.wdk.unity.tasks.DefaultResourceCopyTask
 import wooga.gradle.wdk.unity.tasks.IOSResourceCopyAction
@@ -55,6 +58,9 @@ class WdkUnityPlugin implements Plugin<Project> {
     static String IOS_RESOURCES_CONFIGURATION_NAME = "ios"
     static String WEBGL_RESOURCES_CONFIGURATION_NAME = "webgl"
     static String RUNTIME_CONFIGURATION_NAME = "runtime"
+
+    static String PERFORM_TEST_BUILD_TASK_NAME = "performTestBuild"
+    static String CLEAN_TEST_BUILD_TASK_NAME = "cleanTestBuild"
 
     private Project project
     private final FileResolver fileResolver
@@ -90,6 +96,8 @@ class WdkUnityPlugin implements Plugin<Project> {
         configureCleanObjects(extension)
         addResourceCopyTasks()
         configureUnityTaskDependencies()
+
+        createTestBuildTasks(project, project.tasks)
     }
 
     private void addLifecycleTasks() {
@@ -161,6 +169,45 @@ class WdkUnityPlugin implements Plugin<Project> {
                     task.dependsOn project.tasks[SETUP_TASK_NAME]
                 }
             })
+        }
+    }
+
+    static void createTestBuildTasks(Project project, TaskContainer tasks) {
+        File paketUnity3DReferences = project.file("paket.unity3d.references")
+
+        if (paketUnity3DReferences.exists() && paketUnity3DReferences.text.contains("Wooga.AtlasBuildTools")) {
+            def checkTask = tasks.getByName(LifecycleBasePlugin.CHECK_TASK_NAME)
+            def performTestBuildTask = tasks.create(PERFORM_TEST_BUILD_TASK_NAME)
+            performTestBuildTask.with {
+                description = "perform all test builds"
+                group = GROUP
+            }
+
+            checkTask.dependsOn performTestBuildTask
+
+            def cleanTestBuildTask = tasks.create(name: CLEAN_TEST_BUILD_TASK_NAME, type: Unity) as Unity
+            cleanTestBuildTask.with {
+                description = "Clean test build"
+                group = GROUP
+                args "-executeMethod", "Wooga.Atlas.BuildTools.BuildFromEditor.BuildTestClean"
+            }
+
+            performTestBuildTask.dependsOn cleanTestBuildTask
+
+            ["Android", "IOS", "WebGL"].each { platform ->
+                String taskName = "performTestBuild${platform}"
+                def performTestBuildPlatform = tasks.create(name: taskName, type: Unity) as Unity
+                performTestBuildPlatform.with {
+                    args "-executeMethod", "Wooga.Atlas.BuildTools.BuildFromEditor.BuildTest${platform}"
+                    description = "Build test project for ${platform}"
+
+                }
+
+                performTestBuildTask.dependsOn performTestBuildPlatform
+                cleanTestBuildTask.mustRunAfter performTestBuildPlatform
+            }
+
+
         }
     }
 }

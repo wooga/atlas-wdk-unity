@@ -30,8 +30,8 @@ class DefaultWdkPluginExtension implements WdkPluginExtension {
 
     private Factory<File> pluginsDir
 
-    static String IOS_PLUGIN_DIRECTORY = "WebGL"
-    static String ANDROID_PLUGIN_DIRECTORY = "WebGL"
+    static String IOS_PLUGIN_DIRECTORY = "iOS"
+    static String ANDROID_PLUGIN_DIRECTORY = "Android"
     static String WEBGL_PLUGIN_DIRECTORY = "WebGL"
 
     DefaultWdkPluginExtension(Project project, FileResolver fileResolver, Instantiator instantiator) {
