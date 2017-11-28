@@ -17,11 +17,14 @@
 
 package wooga.gradle.wdk.unity
 
+import com.google.common.io.Files
+import org.apache.commons.io.FileUtils
 import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.file.CopySpec
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.ConventionMapping
 import org.gradle.api.internal.IConventionAware
@@ -45,6 +48,7 @@ import wooga.gradle.wdk.unity.tasks.ResourceCopyTask
 import wooga.gradle.wdk.unity.tasks.WebGLResourceCopyAction
 
 import javax.inject.Inject
+import java.nio.file.Path
 import java.util.concurrent.Callable
 
 class WdkUnityPlugin implements Plugin<Project> {
@@ -208,12 +212,18 @@ class WdkUnityPlugin implements Plugin<Project> {
                     @Override
                     void execute(Task task) {
                         def paketUnitydir = wdk.getPaketUnity3dInstallDir().path
-                        wdk.editorDependenciesToMoveDuringTestBuild.each {
-                            def fileToMove = new File(paketUnitydir, it)
-                            def destination = new File(paketUnitydir, "${it}/Editor")
+                        wdk.editorDependenciesToMoveDuringTestBuild.each { dependency ->
+                            def fileToMove = new File(paketUnitydir, dependency)
+                            def destination = new File(fileToMove, "Editor")
+                            def tempDir = File.createTempDir(dependency, "Editor")
+                            tempDir.delete()
+
+                            logger.info("move dependency ${dependency} for test build")
+                            logger.info("move ${fileToMove.path} to ${destination.path}")
 
                             if (fileToMove.exists()) {
-                                project.ant.move(file: fileToMove, tofile: destination)
+                                FileUtils.moveDirectoryToDirectory(fileToMove, tempDir, true)
+                                FileUtils.moveDirectory(new File(tempDir, dependency), destination)
                             } else {
                                 logger.info("$fileToMove does not exist")
                             }
@@ -222,24 +232,29 @@ class WdkUnityPlugin implements Plugin<Project> {
                 })
             }
 
-            moveEditorDependencies.mustRunAfter()
+            performTestBuildTask.dependsOn(moveEditorDependencies)
 
             def unMoveEditorDependecies = tasks.create(UN_MOVE_EDITOR_DEPENDENCIES)
             unMoveEditorDependecies.with {
                 description = "moves some editor only dependencies back to old location"
-                dependsOn moveEditorDependencies
                 doLast(new Action<Task>() {
                     @Override
                     void execute(Task task) {
                         def paketUnitydir = wdk.getPaketUnity3dInstallDir().path
-                        wdk.editorDependenciesToMoveDuringTestBuild.each {
-                            def fileToMove = new File(paketUnitydir, "${it}/Editor")
-                            def destination = new File(paketUnitydir, it)
-                            def tempDir = File.createTempDir()
+                        wdk.editorDependenciesToMoveDuringTestBuild.each { dependency ->
+
+                            def destination = new File(paketUnitydir, dependency)
+                            def fileToMove = new File(destination, "Editor")
+                            def tempDir = File.createTempDir(dependency, "Editor")
+                            tempDir.delete()
+
+                            logger.info("move dependency ${dependency} back after test build")
+                            logger.info("move ${fileToMove.path} to ${destination.path}")
 
                             if (fileToMove.exists()) {
-                                project.ant.move(file: fileToMove, tofile: tempDir)
-                                project.ant.move(file: new File(tempDir, "Editor"), tofile: destination)
+                                FileUtils.moveDirectoryToDirectory(fileToMove, tempDir, true)
+                                FileUtils.forceDelete(destination)
+                                FileUtils.moveDirectory(new File(tempDir, "Editor"), destination)
                             } else {
                                 logger.info("$fileToMove does not exist")
                             }

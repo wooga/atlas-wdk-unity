@@ -150,6 +150,7 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         def sourceDir = new File(paketInstallDirectory, name)
         sourceDir.mkdirs()
         def testFile = createFile("Test.cs", sourceDir)
+        def testFile2 = createFile("Test.cs.meta", sourceDir)
 
         and: "a future directory where files are moved to"
         def destinatonDir = new File(sourceDir, "Editor")
@@ -170,13 +171,17 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         destinatonDir.exists()
         !sourceDir.list().contains(testFile.name)
         destinatonDir.list().contains(testFile.name)
+        destinatonDir.list().contains(testFile2.name)
 
         when:
+        def meta = createFile("Editor.meta", sourceDir)
         runTasksSuccessfully(WdkUnityPlugin.UN_MOVE_EDITOR_DEPENDENCIES)
 
         then:
+        !meta.exists()
         !destinatonDir.exists()
         sourceDir.list().contains(testFile.name)
+        sourceDir.list().contains(testFile2.name)
 
         where:
         name          | setInstruction
@@ -198,7 +203,7 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
 
         def sourceDir = new File(paketInstallDirectory, "Dependency1")
         sourceDir.mkdirs()
-        def testFile = createFile("Test.cs", sourceDir)
+        createFile("Test.cs", sourceDir)
 
         and: "a future directory where files are moved to"
         def destinatonDir = new File(sourceDir, "Editor")
