@@ -29,7 +29,7 @@ pluginBundle {
 
     plugins {
         plugins {
-            id = 'net.wooga.unity-wdk'
+            id = 'net.wooga.wdk-unity'
             displayName = 'Wooga internal plugin to help setup depencencies for unity packages'
             description = 'This plugin provides tasks to define and copy development dependencies into the Unity3D project'
         }
@@ -37,6 +37,6 @@ pluginBundle {
 }
 
 dependencies {
-    compile 'gradle.plugin.net.wooga.gradle:atlas-unity:0.16.0-rc.2'
+    compile 'gradle.plugin.net.wooga.gradle:atlas-unity:0.16.0'
     compile "commons-io:commons-io:+"
 }
