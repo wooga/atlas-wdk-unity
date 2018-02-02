@@ -52,7 +52,7 @@ abstract class UnityIntegrationSpec extends IntegrationSpec {
         buildFile << """
             group = 'test'
             ${applyPlugin(WdkUnityPlugin)}
-         
+
             unity.unityPath("fakeUnity.bat")
         """.stripIndent()
     }
