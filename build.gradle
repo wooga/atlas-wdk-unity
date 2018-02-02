@@ -16,7 +16,7 @@
  */
 
 plugins {
-    id 'net.wooga.plugins' version '0.1.1'
+    id 'net.wooga.plugins' version '0.3.0'
 }
 
 group 'net.wooga.gradle'
@@ -36,7 +36,11 @@ pluginBundle {
     }
 }
 
+github {
+    repositoryName = "wooga/atlas-wdk-unity"
+}
+
 dependencies {
-    compile 'gradle.plugin.net.wooga.gradle:atlas-unity:0.16.0'
+    compile 'gradle.plugin.net.wooga.gradle:atlas-unity:0.16.+'
     compile "commons-io:commons-io:+"
 }
