@@ -2,46 +2,95 @@
 @Library('github.com/wooga/atlas-jenkins-pipeline@0.0.3') _
 
 pipeline {
-    agent {
-        label 'windows&&unity_5.5'
-    }
-
-    environment {
-        artifactoryCredentials  = credentials('artifactory_publish')
-        nugetkey                = credentials('artifactory_deploy')
-        TRAVIS_JOB_NUMBER       = "${BUILD_NUMBER}.WIN"
-    }
+    agent none
 
     stages {
         stage('Preparation') {
+            agent any
+
             steps {
                 sendSlackNotification "STARTED", true
             }
         }
 
-        stage('Test') {
-            steps {
-                gradleWrapper "check"
+        stage('check') {
+            parallel {
+                stage('Windows') {
+                    agent {
+                        label 'windows&&atlas'
+                    }
+
+                    environment {
+                        COVERALLS_REPO_TOKEN    = credentials('atlas_wdk_unity_coveralls_token')
+                        TRAVIS_JOB_NUMBER       = "${BUILD_NUMBER}.WIN"
+                    }
+
+                    steps {
+                        gradleWrapper "check"
+                    }
+
+                    post {
+                        success {
+                            gradleWrapper "jacocoTestReport coveralls"
+                            publishHTML([
+                                allowMissing: true,
+                                alwaysLinkToLastBuild: true,
+                                keepAll: true,
+                                reportDir: 'build/reports/jacoco/test/html',
+                                reportFiles: 'index.html',
+                                reportName: 'Coverage',
+                                reportTitles: ''
+                            ])
+                        }
+
+                        always {
+                            junit allowEmptyResults: true, testResults: 'build/test-results/**/*.xml'
+
+                        }
+                    }
+                }
+
+                stage('macOS') {
+                    agent {
+                        label 'osx&&atlas'
+                    }
+
+                    environment {
+                        COVERALLS_REPO_TOKEN    = credentials('atlas_wdk_unity_coveralls_token')
+                        TRAVIS_JOB_NUMBER       = "${BUILD_NUMBER}.MACOS"
+                    }
+
+                    steps {
+                        gradleWrapper "check"
+                    }
+
+                    post {
+                        success {
+                            gradleWrapper "jacocoTestReport coveralls"
+                            publishHTML([
+                                allowMissing: true,
+                                alwaysLinkToLastBuild: true,
+                                keepAll: true,
+                                reportDir: 'build/reports/jacoco/test/html',
+                                reportFiles: 'index.html',
+                                reportName: 'Coverage',
+                                reportTitles: ''
+                            ])
+                        }
+
+                        always {
+                            junit allowEmptyResults: true, testResults: 'build/test-results/**/*.xml'
+
+                        }
+                    }
+                }
             }
-        }
-    }
 
-    post {
-        always {
-            gradleWrapper "jacocoTestReport"
-            publishHTML([
-                allowMissing: true,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'build/reports/jacoco/test/html',
-                reportFiles: 'index.html',
-                reportName: 'Coverage',
-                reportTitles: ''
-            ])
-
-            sendSlackNotification currentBuild.result, true
-            junit allowEmptyResults: true, testResults: 'build/test-results/**/*.xml'
-            gradleWrapper "clean"
+            post {
+                always {
+                    sendSlackNotification currentBuild.result, true
+                }
+            }
         }
     }
 }
