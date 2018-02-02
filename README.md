@@ -11,6 +11,10 @@ atlas-wdk-unity
 
 This plugin provides tasks to define and copy development dependencies into the Unity3D project.
 
+## Documentation
+
+- [API docs](https://wooga.github.io/atlas-wdk-unity/docs/groovydoc/)
+
 Gradle and Java Compatibility
 =============================
 
