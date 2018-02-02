@@ -13,7 +13,7 @@ This plugin provides tasks to define and copy development dependencies into the 
 
 ## Documentation
 
-- [API docs](https://wooga.github.io/atlas-wdk-unity/docs/groovydoc/)
+- [API docs](https://wooga.github.io/atlas-wdk-unity/docs/api/)
 
 Gradle and Java Compatibility
 =============================
