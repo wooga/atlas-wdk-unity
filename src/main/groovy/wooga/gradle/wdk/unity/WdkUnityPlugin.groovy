@@ -17,7 +17,7 @@
 
 package wooga.gradle.wdk.unity
 
-import com.google.common.io.Files
+
 import org.apache.commons.io.FileUtils
 import org.gradle.api.Action
 import org.gradle.api.Plugin
@@ -38,7 +38,7 @@ import org.gradle.internal.reflect.Instantiator
 import org.gradle.language.base.plugins.LifecycleBasePlugin
 import wooga.gradle.unity.UnityPlugin
 import wooga.gradle.unity.UnityPluginExtension
-import wooga.gradle.unity.tasks.AbstractUnityTask
+import wooga.gradle.unity.tasks.internal.AbstractUnityTask
 import wooga.gradle.unity.tasks.Unity
 import wooga.gradle.unity.tasks.UnityPackage
 import wooga.gradle.wdk.unity.tasks.AndroidResourceCopyAction

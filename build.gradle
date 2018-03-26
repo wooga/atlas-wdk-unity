@@ -16,14 +16,14 @@
  */
 
 plugins {
-    id 'net.wooga.plugins' version '0.3.0'
+    id 'net.wooga.plugins' version '1.1.0'
 }
 
 group 'net.wooga.gradle'
 description = 'Plugin for wooga unity package development.'
 
 pluginBundle {
-    website = 'https://github.com/wooga/atlas-wdk-unity'
+    website = 'https://wooga.github.io/atlas-wdk-unity/'
     vcsUrl = 'https://github.com/wooga/atlas-wdk-unity'
     tags = ['Unity3D', 'wooga', 'package', 'wdk']
 
@@ -41,6 +41,6 @@ github {
 }
 
 dependencies {
-    compile 'gradle.plugin.net.wooga.gradle:atlas-unity:0.16.+'
+    compile 'gradle.plugin.net.wooga.gradle:atlas-unity:1.+'
     compile "commons-io:commons-io:+"
 }

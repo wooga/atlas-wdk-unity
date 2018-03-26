@@ -34,6 +34,9 @@ Tested with Oracle JDK8
 | 3.5.1          | ![yes]      |
 | 4.0            | ![yes]      |
 
+Development
+===========
+[Code of Conduct](docs/Code-of-conduct.md)
 
 LICENSE
 =======
