@@ -28,7 +28,9 @@ class WebGLResourceCopyAction extends ResourceCopyAction {
     @Override
     void copyResources(Project project, WdkPluginExtension extension, Configuration resources) {
         File collectDir = extension.getWebGLResourcePluginDir()
-        collectDir.mkdirs()
+        if(resources.size() > 0) {
+            collectDir.mkdirs()
+        }
         project.sync(new Action<CopySpec>() {
             @Override
             void execute(CopySpec copySpec) {
