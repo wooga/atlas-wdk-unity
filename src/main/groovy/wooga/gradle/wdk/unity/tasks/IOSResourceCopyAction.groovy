@@ -28,7 +28,9 @@ class IOSResourceCopyAction extends ResourceCopyAction {
     @Override
     void copyResources(Project project, WdkPluginExtension extension, Configuration resources) {
         File collectDir = extension.getIOSResourcePluginDir()
-        collectDir.mkdirs()
+        if(resources.size() > 0) {
+            collectDir.mkdirs()
+        }
         def artifacts = resources.resolve()
         def zipFrameworkArtifacts = artifacts.findAll { it.path =~ /\.framework.zip$/ }
 

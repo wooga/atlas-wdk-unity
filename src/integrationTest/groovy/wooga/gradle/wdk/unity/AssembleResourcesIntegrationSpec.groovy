@@ -82,6 +82,11 @@ class AssembleResourcesIntegrationSpec extends IntegrationSpec {
             ${applyPlugin(WdkUnityPlugin)}
         """.stripIndent()
 
+        and: "the plugins directories don't exist yet"
+        assert !androidPlugins.exists()
+        assert !iOSPlugins.exists()
+        assert !webGlPlugins.exists()
+
         when: "running the setup task"
         def result = runTasksSuccessfully(WdkUnityPlugin.SETUP_TASK_NAME)
 
@@ -89,8 +94,9 @@ class AssembleResourcesIntegrationSpec extends IntegrationSpec {
         result.wasExecuted(WdkUnityPlugin.ASSEMBLE_RESOURCES_TASK_NAME)
         result.wasExecuted("assembleIOSResources")
         result.wasExecuted("assembleAndroidResources")
-        !androidPlugins.list()
-        !iOSPlugins.list()
+        !androidPlugins.exists()
+        !iOSPlugins.exists()
+        !webGlPlugins.exists()
     }
 
     def "syncs iOS resources when configured"() {
