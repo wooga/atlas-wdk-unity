@@ -94,6 +94,7 @@ class AssembleResourcesIntegrationSpec extends IntegrationSpec {
         result.wasExecuted(WdkUnityPlugin.ASSEMBLE_RESOURCES_TASK_NAME)
         result.wasExecuted("assembleIOSResources")
         result.wasExecuted("assembleAndroidResources")
+        result.wasExecuted("assembleWebGLResources")
         !androidPlugins.exists()
         !iOSPlugins.exists()
         !webGlPlugins.exists()
