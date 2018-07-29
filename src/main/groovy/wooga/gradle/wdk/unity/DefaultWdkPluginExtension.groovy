@@ -25,7 +25,7 @@ import wooga.gradle.unity.UnityPluginExtension
 
 class DefaultWdkPluginExtension implements WdkPluginExtension {
 
-    private final FileResolver fileResolver
+    protected final FileResolver fileResolver
     private final Project project
 
     private Factory<File> pluginsDir
@@ -54,12 +54,17 @@ class DefaultWdkPluginExtension implements WdkPluginExtension {
 
     @Override
     void setAssetsDir(File path) {
-        assetsDir = fileResolver.resolveLater(path)
+        setAssetsDir(path as Object)
     }
 
     @Override
     void setAssetsDir(Object path) {
-        assetsDir = fileResolver.resolveLater(path)
+        assetsDir = new Factory<File>() {
+            @Override
+            File create() {
+                fileResolver.resolve(path)
+            }
+        }
     }
 
     @Override
@@ -72,13 +77,18 @@ class DefaultWdkPluginExtension implements WdkPluginExtension {
     }
 
     @Override
-    void setPluginsDir(File reportsDir) {
-        pluginsDir = fileResolver.resolveLater(reportsDir)
+    void setPluginsDir(File path) {
+        setPluginsDir(path as Object)
     }
 
     @Override
-    void setPluginsDir(Object reportsDir) {
-        pluginsDir = fileResolver.resolveLater(reportsDir)
+    void setPluginsDir(Object path) {
+        pluginsDir = new Factory<File>() {
+            @Override
+            File create() {
+                fileResolver.resolve(path)
+            }
+        }
     }
 
     @Override
