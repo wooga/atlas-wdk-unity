@@ -18,7 +18,6 @@
 package wooga.gradle.wdk.unity
 
 import groovy.json.StringEscapeUtils
-import nebula.test.IntegrationSpec
 
 abstract class UnityIntegrationSpec extends IntegrationSpec {
 
