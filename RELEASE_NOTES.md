@@ -1,3 +1,7 @@
+### 1.1.0 - Sep 24 2018
+
+* ![ADD] support for gradle `4.10`
+
 ### 1.0.0 - Mar 23 2018
 
 * ![NEW] stable major release
