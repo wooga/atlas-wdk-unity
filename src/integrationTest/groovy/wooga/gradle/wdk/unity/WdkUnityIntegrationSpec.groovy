@@ -79,6 +79,27 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
     }
 
     @Unroll
+    def "task :#taskName calls unity with correct build target"() {
+        given: "a paket.unity3d.references file with 'Wooga.AtlasBuildTools'"
+        def reference = createFile("paket.unity3d.references")
+        reference << """
+        Wooga.AtlasBuildTools
+        """.stripIndent()
+
+        when:
+        def result = runTasksSuccessfully(taskName)
+
+        then:
+        result.standardOutput.contains(args)
+
+        where:
+        taskName                                                | args
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "Android" | "-buildTarget android"
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "IOS"     | "-buildTarget ios"
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "WebGL"   | "-buildTarget webgl"
+    }
+
+    @Unroll
     def "verify :#taskA runs after :#taskB when execute '#execute'"() {
         given: "a paket.unity3d.references file with 'Wooga.AtlasBuildTools'"
         def reference = createFile("paket.unity3d.references")

@@ -38,6 +38,7 @@ import org.gradle.internal.reflect.Instantiator
 import org.gradle.language.base.plugins.LifecycleBasePlugin
 import wooga.gradle.unity.UnityPlugin
 import wooga.gradle.unity.UnityPluginExtension
+import wooga.gradle.unity.batchMode.BuildTarget
 import wooga.gradle.unity.tasks.internal.AbstractUnityTask
 import wooga.gradle.unity.tasks.Unity
 import wooga.gradle.unity.tasks.UnityPackage
@@ -276,11 +277,14 @@ class WdkUnityPlugin implements Plugin<Project> {
             performTestBuildTask.dependsOn cleanTestBuildTask
 
             ["Android", "IOS", "WebGL"].each { platform ->
+                BuildTarget target = BuildTarget.valueOf(platform.toLowerCase())
                 String taskName = "performTestBuild${platform}"
                 def performTestBuildPlatform = tasks.create(name: taskName, type: Unity) as Unity
                 performTestBuildPlatform.with {
                     args "-executeMethod", "Wooga.Atlas.BuildTools.BuildFromEditor.BuildTest${platform}"
-                    description = "Build test project for ${platform}"
+                    group = GROUP
+                    description = "Build test project for ${target}"
+                    buildTarget = target
                 }
 
                 performTestBuildTask.dependsOn performTestBuildPlatform
