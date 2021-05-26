@@ -42,5 +42,5 @@ github {
 
 dependencies {
     compile "gradle.plugin.net.wooga.gradle:atlas-unity:1.+"
-    compile "commons-io:commons-io:2.8.0"
+    compile "commons-io:commons-io:2.9.0"
 }
