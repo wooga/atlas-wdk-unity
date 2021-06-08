@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Wooga GmbH
+ * Copyright 2021 Wooga GmbH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  *
  */
 
-package wooga.gradle.wdk.unity.tasks
+package wooga.gradle.wdk.unity.actions
 
 import org.gradle.api.Action
 import org.gradle.api.Project
@@ -23,19 +23,37 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.CopySpec
 import wooga.gradle.wdk.unity.WdkPluginExtension
 
-class WebGLResourceCopyAction extends ResourceCopyAction {
+class IOSResourceCopyAction extends ResourceCopyAction {
 
     @Override
     void copyResources(Project project, WdkPluginExtension extension, Configuration resources) {
-        File collectDir = extension.getWebGLResourcePluginDir()
+        def collectDir = extension.iosResourcePluginDir.get().asFile
+
+        // Create missing directories in the path
         if(resources.size() > 0) {
             collectDir.mkdirs()
         }
-        project.sync(new Action<CopySpec>() {
+        def artifacts = resources.resolve()
+        def zipFrameworkArtifacts = artifacts.findAll { it.path =~ /\.framework.zip$/ }
+
+        zipFrameworkArtifacts.each { artifact ->
+            def artifactName = artifact.name.replace(".zip", "")
+            project.sync(new Action<CopySpec>() {
+                @Override
+                void execute(CopySpec copySpec) {
+                    copySpec.from project.zipTree(artifact)
+                    copySpec.into "$collectDir/$artifactName"
+                }
+            })
+        }
+
+        project.copy(new Action<CopySpec>() {
             @Override
             void execute(CopySpec copySpec) {
-                copySpec.from(resources)
-                copySpec.into(collectDir)
+                copySpec.from resources
+                copySpec.into "$collectDir"
+                copySpec.exclude "*.framework"
+                copySpec.exclude "*.framework.zip"
             }
         })
     }

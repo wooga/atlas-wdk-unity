@@ -130,33 +130,6 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
     }
 
     @Unroll
-    def "reconfigures :#taskName"() {
-        given: "some files in wdk assets directory"
-        def assetsDir = new File(projectDir, "Assets/Wooga")
-        assetsDir.mkdirs()
-
-        def subDir = new File(assetsDir, "sub")
-        subDir.mkdirs()
-
-        createFile("Test1.cs", assetsDir)
-        createFile("Test2.cs", assetsDir)
-        createFile("Test3.cs", subDir)
-        createFile("Test4.cs", subDir)
-
-        when:
-        def result = runTasksSuccessfully(taskName)
-
-        then:
-        result.wasExecuted(taskName)
-        !result.standardOutput.contains(":${taskName} NO-SOURCE")
-        result.standardOutput.contains("Assets/Wooga")
-
-        where:
-        taskName                             | _
-        UnityPlugin.EXPORT_PACKAGE_TASK_NAME | _
-    }
-
-    @Unroll
     def "can set custom dependencies to move with #setInstruction"() {
         given: "a paket.unity3d.references file with 'Wooga.AtlasBuildTools'"
         def reference = createFile("paket.unity3d.references")
@@ -174,8 +147,8 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         def testFile2 = createFile("Test.cs.meta", sourceDir)
 
         and: "a future directory where files are moved to"
-        def destinatonDir = new File(sourceDir, "Editor")
-        assert !destinatonDir.exists()
+        def destinationDir = new File(sourceDir, "Editor")
+        assert !destinationDir.exists()
 
         and: "dependencies to be moved configured"
         buildFile << """
@@ -184,15 +157,15 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         
         """.stripIndent()
 
-
         when:
-        runTasksSuccessfully(WdkUnityPlugin.MOVE_EDITOR_DEPENDENCIES)
+        def result = runTasksSuccessfully(WdkUnityPlugin.MOVE_EDITOR_DEPENDENCIES)
 
         then:
-        destinatonDir.exists()
+        result.success
+        destinationDir.exists()
         !sourceDir.list().contains(testFile.name)
-        destinatonDir.list().contains(testFile.name)
-        destinatonDir.list().contains(testFile2.name)
+        destinationDir.list().contains(testFile.name)
+        destinationDir.list().contains(testFile2.name)
 
         when:
         def meta = createFile("Editor.meta", sourceDir)
@@ -200,7 +173,7 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
 
         then:
         !meta.exists()
-        !destinatonDir.exists()
+        !destinationDir.exists()
         sourceDir.list().contains(testFile.name)
         sourceDir.list().contains(testFile2.name)
 

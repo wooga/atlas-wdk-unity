@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Wooga GmbH
+ * Copyright 2021 Wooga GmbH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,32 +17,84 @@
 
 package wooga.gradle.wdk.unity
 
-interface WdkPluginExtension {
-    File getPluginsDir()
+import org.gradle.api.file.Directory
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Provider
+import org.gradle.internal.impldep.org.eclipse.jgit.errors.NotSupportedException
+import org.gradle.util.GUtil
 
-    void setPluginsDir(File reportsDir)
+import javax.inject.Inject
 
-    void setPluginsDir(Object reportsDir)
+abstract class WdkPluginExtension {
 
-    File getAssetsDir()
+    @Inject
+    ObjectFactory getObjects() {
+        throw new NotSupportedException("")
+    }
 
-    void setAssetsDir(File reportsDir)
+    private final DirectoryProperty pluginsDir = objects.directoryProperty()
+    DirectoryProperty getPluginsDir(){
+        pluginsDir
+    }
+    void setPluginsDir(Provider<Directory> value) {
+        pluginsDir.set(value)
+    }
+    void setPluginsDir(File value) {
+        pluginsDir.set(value)
+    }
 
-    void setAssetsDir(Object reportsDir)
+    private final DirectoryProperty assetsDir = objects.directoryProperty()
+    DirectoryProperty getAssetsDir() {
+        assetsDir
+    }
+    void setAssetsDir(File value) {
+        assetsDir.set(value)
+    }
+    void setAssetsDir(Provider<Directory> value) {
+        assetsDir.set(value)
+    }
 
-    File getIOSResourcePluginDir()
+    private final DirectoryProperty iosResourcePluginDir = objects.directoryProperty()
+    DirectoryProperty getIosResourcePluginDir() {
+        iosResourcePluginDir
+    }
 
-    File getAndroidResourcePluginDir()
+    private final DirectoryProperty androidResourcePluginDir = objects.directoryProperty()
+    DirectoryProperty getAndroidResourcePluginDir() {
+        androidResourcePluginDir
+    }
 
-    File getWebGLResourcePluginDir()
+    private final DirectoryProperty webGLResourcePluginDir = objects.directoryProperty()
+    DirectoryProperty getWebGLResourcePluginDir() {
+        webGLResourcePluginDir
+    }
 
-    File getPaketUnity3dInstallDir()
+    private final DirectoryProperty paketUnity3dInstallDir = objects.directoryProperty()
+    DirectoryProperty getPaketUnity3dInstallDir() {
+        paketUnity3dInstallDir
+    }
 
-    List<String> getEditorDependenciesToMoveDuringTestBuild()
+    private final List<String> editorDependeciesToMoveDuringTestBuild = new ArrayList<String>()
+    List<String> getEditorDependenciesToMoveDuringTestBuild() {
+        editorDependeciesToMoveDuringTestBuild
+    }
 
-    WdkPluginExtension editorDependenciesToMoveDuringTestBuild(String... var1)
+    WdkPluginExtension editorDependenciesToMoveDuringTestBuild(String... dependencies) {
+        if (dependencies == null) {
+            throw new IllegalArgumentException("dependencies == null!")
+        }
+        editorDependeciesToMoveDuringTestBuild.addAll(Arrays.asList(dependencies))
+        return this
+    }
 
-    WdkPluginExtension editorDependenciesToMoveDuringTestBuild(Iterable<String> var1)
+    WdkPluginExtension editorDependenciesToMoveDuringTestBuild(Iterable<String> dependencies) {
+        GUtil.addToCollection(editorDependeciesToMoveDuringTestBuild, dependencies)
+        return this
+    }
 
-    void setEditorDependenciesToMoveDuringTestBuild(Iterable<String> dependencies)
+    void setEditorDependenciesToMoveDuringTestBuild(Iterable<String> dependencies) {
+        editorDependeciesToMoveDuringTestBuild.clear()
+        editorDependeciesToMoveDuringTestBuild.addAll(dependencies)
+    }
 }

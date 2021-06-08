@@ -18,6 +18,7 @@
 package wooga.gradle.wdk.unity
 
 import groovy.json.StringEscapeUtils
+import wooga.gradle.unity.utils.ProjectSettingsFile
 
 abstract class UnityIntegrationSpec extends IntegrationSpec {
 
@@ -40,9 +41,7 @@ abstract class UnityIntegrationSpec extends IntegrationSpec {
                 @echo off
                 echo %*
             """.stripIndent()
-        }
-        else
-        {
+        } else {
             unityTestLocation << """
                 echo \$@
             """.stripIndent()
@@ -52,7 +51,7 @@ abstract class UnityIntegrationSpec extends IntegrationSpec {
             group = 'test'
             ${applyPlugin(WdkUnityPlugin)}
 
-            unity.unityPath("fakeUnity.bat")
+            unity.unityPath.set(file("fakeUnity.bat"))
         """.stripIndent()
     }
 }

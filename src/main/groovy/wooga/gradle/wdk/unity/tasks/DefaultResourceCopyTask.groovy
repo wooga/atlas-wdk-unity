@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Wooga GmbH
+ * Copyright 2021 Wooga GmbH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,15 @@ package wooga.gradle.wdk.unity.tasks
 
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.internal.ConventionTask
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.InputFiles
 
 class DefaultResourceCopyTask extends ConventionTask implements ResourceCopyTask {
 
     private Configuration resources
 
+    @InputFiles
     Configuration getResources() {
         resources
     }

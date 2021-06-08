@@ -200,7 +200,7 @@ class AssembleResourcesIntegrationSpec extends IntegrationSpec {
         buildFile << """
             ${applyPlugin(WdkUnityPlugin)}
 
-            wdk.pluginsDir = ${value}"${androidPlugins.path.replace('\\', '/')}"
+            wdk.pluginsDir = ${value}("${androidPlugins.path.replace('\\', '/')}")
             
             dependencies {
                 android fileTree(dir: "${androidResourcebase.parentFile.path.replace('\\', '/')}")
@@ -217,7 +217,6 @@ class AssembleResourcesIntegrationSpec extends IntegrationSpec {
         where:
         type     | value
         "file"   | "file "
-        "object" | ""
     }
 
     @Unroll
@@ -236,7 +235,7 @@ class AssembleResourcesIntegrationSpec extends IntegrationSpec {
         buildFile << """
             ${applyPlugin(WdkUnityPlugin)}
 
-            wdk.assetsDir = ${value}"${customAssets.path.replace('\\', '/')}"
+            wdk.assetsDir = ${value}("${customAssets.path.replace('\\', '/')}")
             
             dependencies {
                 android fileTree(dir: "${androidResourcebase.parentFile.path.replace('\\', '/')}")
@@ -253,7 +252,6 @@ class AssembleResourcesIntegrationSpec extends IntegrationSpec {
         where:
         type     | value
         "file"   | "file "
-        "object" | ""
     }
 
     @Unroll()
@@ -272,7 +270,7 @@ class AssembleResourcesIntegrationSpec extends IntegrationSpec {
         buildFile << """
             ${applyPlugin(WdkUnityPlugin)}
 
-            wdk.pluginsDir = "${pluginsDir}"
+            wdk.pluginsDir = file("${pluginsDir}")
             dependencies {
                 ios fileTree(dir: "${iOSResourcebase.path.replace('\\', '/')}")
                 android fileTree(dir: "${androidResourcebase.path.replace('\\', '/')}")
