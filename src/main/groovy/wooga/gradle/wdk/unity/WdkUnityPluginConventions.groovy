@@ -15,19 +15,13 @@
  *
  */
 
-package wooga.gradle.wdk.unity.tasks
+package wooga.gradle.wdk.unity
 
-import org.gradle.api.Task
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.internal.IConventionAware
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFiles
+class WdkUnityPluginConventions {
 
-interface ResourceCopyTask extends Task, IConventionAware {
+    static String IOS_PLUGIN_DIRECTORY = "iOS"
+    static String ANDROID_PLUGIN_DIRECTORY = "Android"
+    static String WEBGL_PLUGIN_DIRECTORY = "WebGL"
+    static String PAKET_UNITY_3D_INSTALL_DIRECTORY = "Paket.Unity3D"
 
-    Configuration getResources()
-
-    void setResources(Configuration resources)
-
-    ResourceCopyTask resources(Configuration resources)
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Wooga GmbH
+ * Copyright 2021 Wooga GmbH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,32 +24,28 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.file.CopySpec
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.ConventionMapping
-import org.gradle.api.internal.IConventionAware
 import org.gradle.api.internal.file.FileResolver
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.TaskContainer
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.reflect.Instantiator
 import org.gradle.language.base.plugins.LifecycleBasePlugin
 import wooga.gradle.unity.UnityPlugin
 import wooga.gradle.unity.UnityPluginExtension
-import wooga.gradle.unity.batchMode.BuildTarget
-import wooga.gradle.unity.tasks.internal.AbstractUnityTask
+import wooga.gradle.unity.UnityTask
+import wooga.gradle.unity.models.BuildTarget
 import wooga.gradle.unity.tasks.Unity
-import wooga.gradle.unity.tasks.UnityPackage
-import wooga.gradle.wdk.unity.tasks.AndroidResourceCopyAction
+import wooga.gradle.wdk.unity.actions.AndroidResourceCopyAction
 import wooga.gradle.wdk.unity.tasks.DefaultResourceCopyTask
-import wooga.gradle.wdk.unity.tasks.IOSResourceCopyAction
-import wooga.gradle.wdk.unity.tasks.ResourceCopyTask
-import wooga.gradle.wdk.unity.tasks.WebGLResourceCopyAction
+import wooga.gradle.wdk.unity.actions.IOSResourceCopyAction
+import wooga.gradle.wdk.unity.actions.WebGLResourceCopyAction
 
 import javax.inject.Inject
-import java.nio.file.Path
 import java.util.concurrent.Callable
 
 class WdkUnityPlugin implements Plugin<Project> {
@@ -73,8 +69,6 @@ class WdkUnityPlugin implements Plugin<Project> {
     static String MOVE_EDITOR_DEPENDENCIES = "moveEditorDependencies"
     static String UN_MOVE_EDITOR_DEPENDENCIES = "unMoveEditorDependencies"
 
-
-    private Project project
     private final FileResolver fileResolver
     private final Instantiator instantiator
 
@@ -86,50 +80,47 @@ class WdkUnityPlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
-        this.project = project
 
         project.pluginManager.apply(BasePlugin.class)
         project.pluginManager.apply(UnityPlugin.class)
 
-        WdkPluginExtension wdk = project.extensions.create(EXTENSION_NAME, DefaultWdkPluginExtension, project, fileResolver)
+        WdkPluginExtension extension = project.extensions.create(WdkPluginExtension, EXTENSION_NAME, DefaultWdkPluginExtension, project)
 
-        UnityPluginExtension unity = project.extensions.getByType(UnityPluginExtension)
-        ConventionMapping wdkExtensionMapping = ((IConventionAware) wdk).getConventionMapping()
-
-        wdkExtensionMapping.map("pluginsDir", new Callable<File>() {
-            @Override
-            File call() throws Exception {
-                return new File(wdk.getAssetsDir(), "Plugins")
-            }
-        })
-
-        wdkExtensionMapping.map("assetsDir", new Callable<File>() {
-            @Override
-            File call() throws Exception {
-                return new File(unity.getAssetsDir(), "Wooga")
-            }
-        })
-
-        wdk.editorDependenciesToMoveDuringTestBuild("NSubstitute")
-
-        addLifecycleTasks()
-        createExternalResourcesConfigurations()
-        configureCleanObjects(wdk)
-        addResourceCopyTasks()
-        configureUnityTaskDependencies()
-
-        configureExportUnityPackage(project, wdk)
-        createTestBuildTasks(project, project.tasks, wdk)
+        configureExtension(project, extension)
+        addLifecycleTasks(project)
+        createExternalResourcesConfigurations(project)
+        configureCleanObjects(project, extension)
+        addResourceCopyTasks(project)
+        configureUnityTaskDependencies(project)
+        createTestBuildTasks(project, extension)
     }
 
-    private void addLifecycleTasks() {
-        def assembleResourcesTask = project.tasks.create(name: ASSEMBLE_RESOURCES_TASK_NAME, group: GROUP)
-        assembleResourcesTask.description = "gathers all iOS and Android resources into Plugins/ directory of the unity project"
-        project.tasks.create(name: SETUP_TASK_NAME, group: GROUP, dependsOn: assembleResourcesTask)
+    private static void configureExtension(Project project, WdkPluginExtension extension) {
+        UnityPluginExtension unity = project.extensions.getByType(UnityPluginExtension)
+        extension.editorDependenciesToMoveDuringTestBuild("NSubstitute")
+        extension.assetsDir.convention(unity.assetsDir.dir("Wooga"))
+        extension.pluginsDir.convention(extension.assetsDir.dir("Plugins"))
+
+        extension.paketUnity3dInstallDir.convention(unity.assetsDir.dir(WdkUnityPluginConventions.PAKET_UNITY_3D_INSTALL_DIRECTORY))
+        extension.iosResourcePluginDir.convention(extension.pluginsDir.dir(WdkUnityPluginConventions.IOS_PLUGIN_DIRECTORY))
+        extension.androidResourcePluginDir.convention(extension.pluginsDir.dir(WdkUnityPluginConventions.ANDROID_PLUGIN_DIRECTORY))
+        extension.webGLResourcePluginDir.convention(extension.pluginsDir.dir(WdkUnityPluginConventions.WEBGL_PLUGIN_DIRECTORY))
+    }
+
+    private static void addLifecycleTasks(Project project) {
+        def assembleResourcesTask = project.tasks.register(ASSEMBLE_RESOURCES_TASK_NAME, { t ->
+            t.group = GROUP
+            t.description = "gathers all iOS and Android resources into Plugins/ directory of the unity project"
+        })
+
+        project.tasks.register(SETUP_TASK_NAME, { t ->
+            t.dependsOn(assembleResourcesTask)
+        })
+
         project.tasks[BasePlugin.ASSEMBLE_TASK_NAME].dependsOn assembleResourcesTask
     }
 
-    private void createExternalResourcesConfigurations() {
+    private static void createExternalResourcesConfigurations(Project project) {
         Configuration androidConfiguration = project.configurations.maybeCreate(ANDROID_RESOURCES_CONFIGURATION_NAME)
         androidConfiguration.description = "android application resources"
         androidConfiguration.transitive = false
@@ -147,73 +138,82 @@ class WdkUnityPlugin implements Plugin<Project> {
         runtimeConfiguration.extendsFrom(androidConfiguration, iosConfiguration, webglConfiguration)
     }
 
-    private void configureCleanObjects(final WdkPluginExtension wdk) {
+    private static void configureCleanObjects(Project project, final WdkPluginExtension extension) {
         Delete cleanTask = (Delete) project.tasks[BasePlugin.CLEAN_TASK_NAME]
 
-        cleanTask.delete({ wdk.getIOSResourcePluginDir() })
-        cleanTask.delete({ wdk.getAndroidResourcePluginDir() })
-        cleanTask.delete({ wdk.getWebGLResourcePluginDir() })
-        cleanTask.delete({ wdk.getPaketUnity3dInstallDir() })
+        cleanTask.delete(extension.iosResourcePluginDir)
+        cleanTask.delete(extension.androidResourcePluginDir)
+        cleanTask.delete(extension.webGLResourcePluginDir)
+        cleanTask.delete(extension.paketUnity3dInstallDir)
     }
 
-    private void addResourceCopyTasks() {
+    private static void addResourceCopyTasks(Project project) {
         Configuration androidResources = project.configurations[ANDROID_RESOURCES_CONFIGURATION_NAME]
         Configuration iOSResources = project.configurations[IOS_RESOURCES_CONFIGURATION_NAME]
         Configuration webglResources = project.configurations[WEBGL_RESOURCES_CONFIGURATION_NAME]
 
+        def iOSResourceCopy = project.tasks.register("assembleIOSResources", DefaultResourceCopyTask,
+                { t ->
+                    t.description = "gathers all additional iOS files into the Plugins/iOS directory of the unity project"
+                    t.dependsOn(iOSResources)
+                    t.resources = iOSResources
+                    t.doLast(new IOSResourceCopyAction())
+                })
+
+        def androidResourceCopy = project.tasks.register("assembleAndroidResources", DefaultResourceCopyTask,
+                { t ->
+                    t.description = "gathers all *.jar and AndroidManifest.xml files into the Plugins/Android directory of the unity project"
+                    t.dependsOn(androidResources)
+                    t.resources androidResources
+                    t.doLast(new AndroidResourceCopyAction())
+                })
+
+        def webglResourceCopy = project.tasks.register("assembleWebGLResources", DefaultResourceCopyTask,
+                { t ->
+                    t.description = "gathers all webgl related files into the Plugins/webGL directory of the unity project"
+                    t.dependsOn(webglResources)
+                    t.resources webglResources
+                    t.doLast(new WebGLResourceCopyAction())
+                })
+
         def assembleTask = project.tasks[ASSEMBLE_RESOURCES_TASK_NAME]
-
-        ResourceCopyTask iOSResourceCopy = project.tasks.create(name: "assembleIOSResources", type: DefaultResourceCopyTask) as ResourceCopyTask
-        iOSResourceCopy.description = "gathers all additional iOS files into the Plugins/iOS directory of the unity project"
-        iOSResourceCopy.dependsOn(iOSResources)
-        iOSResourceCopy.resources = iOSResources
-        iOSResourceCopy.doLast(new IOSResourceCopyAction())
-
-        ResourceCopyTask androidResourceCopy = project.tasks.create(name: "assembleAndroidResources", type: DefaultResourceCopyTask) as ResourceCopyTask
-        androidResourceCopy.description = "gathers all *.jar and AndroidManifest.xml files into the Plugins/Android directory of the unity project"
-        androidResourceCopy.dependsOn(androidResources)
-        androidResourceCopy.resources androidResources
-        androidResourceCopy.doLast(new AndroidResourceCopyAction())
-
-        ResourceCopyTask webglResourceCopy = project.tasks.create(name: "assembleWebGLResources", type: DefaultResourceCopyTask) as ResourceCopyTask
-        webglResourceCopy.description = "gathers all webgl related files into the Plugins/webGL directory of the unity project"
-        webglResourceCopy.dependsOn(webglResources)
-        webglResourceCopy.resources webglResources
-        webglResourceCopy.doLast(new WebGLResourceCopyAction())
-
         assembleTask.dependsOn iOSResourceCopy, androidResourceCopy, webglResourceCopy
     }
 
-    private void configureUnityTaskDependencies() {
+    private static void configureUnityTaskDependencies(Project project) {
         if (project.pluginManager.hasPlugin("net.wooga.unity")) {
-            project.tasks.withType(AbstractUnityTask, new Action<AbstractUnityTask>() {
+            project.tasks.withType(UnityTask, new Action<UnityTask>() {
                 @Override
-                void execute(AbstractUnityTask task) {
+                void execute(UnityTask task) {
                     task.dependsOn project.tasks[SETUP_TASK_NAME]
                 }
             })
         }
     }
 
-    static void createTestBuildTasks(final Project project, final TaskContainer tasks, final WdkPluginExtension wdk) {
+    static void createTestBuildTasks(final Project project, final WdkPluginExtension extension) {
         File paketUnity3DReferences = project.file("paket.unity3d.references")
 
         if (paketUnity3DReferences.exists() && paketUnity3DReferences.text.contains("Wooga.AtlasBuildTools")) {
-            def checkTask = tasks.getByName(LifecycleBasePlugin.CHECK_TASK_NAME)
-            def performTestBuildTask = tasks.create(PERFORM_TEST_BUILD_TASK_NAME)
-            performTestBuildTask.with {
-                description = "perform all test builds"
-                group = GROUP
-            }
 
-            def moveEditorDependencies = tasks.create(MOVE_EDITOR_DEPENDENCIES)
-            moveEditorDependencies.with {
-                description = "moves some editor only dependencies for test builds"
-                doLast(new Action<Task>() {
+            List<TaskProvider<Unity>> platformTasks = ["Android", "IOS", "WebGL"].collect({ platform ->
+                String taskName = "performTestBuild${platform}"
+                project.tasks.register(taskName, Unity, { t ->
+                    t.description = "Build test project for ${platform}"
+                    t.group = GROUP
+                    t.buildTarget = platform.toLowerCase()
+                    t.arguments("-executeMethod", "Wooga.Atlas.BuildTools.BuildFromEditor.BuildTest${platform}")
+                })
+            })
+
+
+            def moveEditorDependencies = project.tasks.register(MOVE_EDITOR_DEPENDENCIES, { t ->
+                t.description = "moves some editor only dependencies for test builds"
+                t.doLast(new Action<Task>() {
                     @Override
                     void execute(Task task) {
-                        def paketUnitydir = wdk.getPaketUnity3dInstallDir().path
-                        wdk.editorDependenciesToMoveDuringTestBuild.each { dependency ->
+                        def paketUnitydir = extension.paketUnity3dInstallDir.get().asFile.path
+                        extension.editorDependenciesToMoveDuringTestBuild.each { dependency ->
                             def fileToMove = new File(paketUnitydir, dependency)
                             def destination = new File(fileToMove, "Editor")
                             def tempDir = File.createTempDir(dependency, "Editor")
@@ -231,18 +231,17 @@ class WdkUnityPlugin implements Plugin<Project> {
                         }
                     }
                 })
-            }
+                // @TODO: Perhaps this is needed if the task has dependencies
+                // t.mustRunAfter platformTasks.dependsOn
+            })
 
-            performTestBuildTask.dependsOn(moveEditorDependencies)
-
-            def unMoveEditorDependecies = tasks.create(UN_MOVE_EDITOR_DEPENDENCIES)
-            unMoveEditorDependecies.with {
-                description = "moves some editor only dependencies back to old location"
-                doLast(new Action<Task>() {
+            def unMoveEditorDependecies = project.tasks.register(UN_MOVE_EDITOR_DEPENDENCIES, { t ->
+                t.description = "moves some editor only dependencies back to old location"
+                t.doLast(new Action<Task>() {
                     @Override
                     void execute(Task task) {
-                        def paketUnitydir = wdk.getPaketUnity3dInstallDir().path
-                        wdk.editorDependenciesToMoveDuringTestBuild.each { dependency ->
+                        def paketUnitydir = extension.paketUnity3dInstallDir.get().asFile.path
+                        extension.editorDependenciesToMoveDuringTestBuild.each { dependency ->
 
                             def destination = new File(paketUnitydir, dependency)
                             def fileToMove = new File(destination, "Editor")
@@ -262,51 +261,29 @@ class WdkUnityPlugin implements Plugin<Project> {
                         }
                     }
                 })
-            }
+                t.mustRunAfter platformTasks
+            })
 
-            performTestBuildTask.dependsOn unMoveEditorDependecies
+            def cleanTestBuildTask = project.tasks.register(CLEAN_TEST_BUILD_TASK_NAME, Unity, { t ->
+                t.description = "Clean test build"
+                t.group = GROUP
+                t.arguments("-executeMethod", "Wooga.Atlas.BuildTools.BuildFromEditor.BuildTestClean")
+                t.mustRunAfter platformTasks
+            })
+
+            def performTestBuildTask = project.tasks.register(PERFORM_TEST_BUILD_TASK_NAME, { t ->
+                t.description = "perform all test builds"
+                t.group = GROUP
+                t.dependsOn(moveEditorDependencies)
+                t.dependsOn(unMoveEditorDependecies)
+                t.dependsOn(cleanTestBuildTask)
+                t.mustRunAfter moveEditorDependencies
+
+                t.dependsOn(platformTasks)
+            })
+
+            def checkTask = project.tasks.getByName(LifecycleBasePlugin.CHECK_TASK_NAME)
             checkTask.dependsOn performTestBuildTask
-
-            def cleanTestBuildTask = tasks.create(name: CLEAN_TEST_BUILD_TASK_NAME, type: Unity) as Unity
-            cleanTestBuildTask.with {
-                description = "Clean test build"
-                group = GROUP
-                args "-executeMethod", "Wooga.Atlas.BuildTools.BuildFromEditor.BuildTestClean"
-            }
-
-            performTestBuildTask.dependsOn cleanTestBuildTask
-
-            ["Android", "IOS", "WebGL"].each { platform ->
-                BuildTarget target = BuildTarget.valueOf(platform.toLowerCase())
-                String taskName = "performTestBuild${platform}"
-                def performTestBuildPlatform = tasks.create(name: taskName, type: Unity) as Unity
-                performTestBuildPlatform.with {
-                    args "-executeMethod", "Wooga.Atlas.BuildTools.BuildFromEditor.BuildTest${platform}"
-                    group = GROUP
-                    description = "Build test project for ${target}"
-                    buildTarget = target
-                }
-
-                performTestBuildTask.dependsOn performTestBuildPlatform
-                cleanTestBuildTask.mustRunAfter performTestBuildPlatform
-
-                performTestBuildTask.mustRunAfter moveEditorDependencies
-                moveEditorDependencies.mustRunAfter performTestBuildPlatform.dependsOn
-                unMoveEditorDependecies.mustRunAfter performTestBuildPlatform
-            }
         }
-    }
-
-    static def configureExportUnityPackage(final Project project, final WdkPluginExtension wdk) {
-        def exportUnityPackageTask = project.tasks.getByName(UnityPlugin.EXPORT_PACKAGE_TASK_NAME) as UnityPackage
-
-        ConventionMapping exportUnityPackageTaskMapping = exportUnityPackageTask.getConventionMapping()
-
-        exportUnityPackageTaskMapping.map("inputFiles", new Callable<FileCollection>() {
-            @Override
-            FileCollection call() throws Exception {
-                return project.files([wdk.assetsDir])
-            }
-        })
     }
 }
