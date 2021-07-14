@@ -42,5 +42,5 @@ github {
 
 dependencies {
     implementation "gradle.plugin.net.wooga.gradle:atlas-unity:(2,3]"
-    implementation "commons-io:commons-io:2.8.0"
+    implementation "commons-io:commons-io:2.11.0"
 }
