@@ -25,6 +25,7 @@ import org.gradle.api.tasks.InputFiles
 
 interface ResourceCopyTask extends Task, IConventionAware {
 
+    @InputFiles
     Configuration getResources()
 
     void setResources(Configuration resources)
