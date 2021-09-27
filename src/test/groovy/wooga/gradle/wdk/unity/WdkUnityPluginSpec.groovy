@@ -20,6 +20,11 @@ package wooga.gradle.wdk.unity
 import nebula.test.ProjectSpec
 import org.gradle.api.DefaultTask
 import spock.lang.Unroll
+import wooga.gradle.dotnetsonar.DotNetSonarqubePlugin
+import wooga.gradle.dotnetsonar.SonarScannerExtension
+import wooga.gradle.dotnetsonar.tasks.BuildSolution
+import wooga.gradle.unity.UnityPlugin
+import wooga.gradle.unity.UnityPluginExtension
 import wooga.gradle.wdk.unity.tasks.ResourceCopyTask
 
 class WdkUnityPluginSpec extends ProjectSpec {
@@ -59,6 +64,8 @@ class WdkUnityPluginSpec extends ProjectSpec {
         WdkUnityPlugin.ASSEMBLE_ANDROID_RESOURCES_TASK_NAME | ResourceCopyTask
         WdkUnityPlugin.ASSEMBLE_WEBGL_RESOURCES_TASK_NAME   | ResourceCopyTask
         WdkUnityPlugin.SETUP_TASK_NAME                      | DefaultTask
+        WdkUnityPlugin.SONARQUBE_BUILD_TASK_NAME            | BuildSolution
+        WdkUnityPlugin.SONARQUBE_TASK_NAME                  | DefaultTask
     }
 
     @Unroll
@@ -80,7 +87,7 @@ class WdkUnityPluginSpec extends ProjectSpec {
     }
 
     @Unroll
-    def 'adds pluginToAdd #pluginToAdd'(String pluginToAdd) {
+    def 'adds pluginToAdd #pluginToAdd'(Object pluginToAdd) {
         given:
         assert !project.plugins.hasPlugin(PLUGIN_NAME)
         assert !project.plugins.hasPlugin(pluginToAdd)
@@ -92,6 +99,48 @@ class WdkUnityPluginSpec extends ProjectSpec {
         project.plugins.hasPlugin(pluginToAdd)
 
         where:
-        pluginToAdd << ['base']
+        pluginToAdd << ['base', UnityPlugin, DotNetSonarqubePlugin]
+    }
+
+    def "configures sonarqube extension"() {
+        given: "project without plugin applied"
+        assert !project.plugins.hasPlugin(PLUGIN_NAME)
+
+        when: "applying plugin"
+        project.plugins.apply(PLUGIN_NAME)
+        project.evaluate()
+
+        then:
+        def sonarExt = project.extensions.getByType(SonarScannerExtension)
+        def unityExt = project.extensions.getByType(UnityPluginExtension)
+        and: "sonarqube extension is configured with defaults"
+        def properties = sonarExt.computeSonarProperties(project)
+        def assetsDir = unityExt.assetsDir.get().asFile.path
+        def reportsDir = unityExt.reportsDir.get().asFile.path
+        properties["sonar.exclusions"] == "${assetsDir}/Paket.Unity3D/**"
+        properties["sonar.cs.nunit.reportsPaths"] == "${reportsDir}/**/*.xml"
+        properties["sonar.cs.opencover.reportsPaths"] == "${reportsDir}/**/*.xml"
+    }
+
+    def "configures sonarBuildUnity task"() {
+        given: "project without plugin applied"
+        assert !project.plugins.hasPlugin(PLUGIN_NAME)
+        and: "props file with fixes to run unity project on msbuild properly"
+
+
+        when: "applying plugin"
+        project.plugins.apply(PLUGIN_NAME)
+
+        then:
+        def unityExt = project.extensions.getByType(UnityPluginExtension)
+        def buildTask = project.tasks.getByName("sonarBuildWDK") as BuildSolution
+        buildTask.solution.get().asFile == new File(projectDir, "${project.name}.sln")
+        buildTask.dotnetExecutable.getOrElse(null) == unityExt.dotnetExecutable.getOrElse(null)
+        buildTask.environment.getting("FrameworkPathOverride").getOrElse(null) ==
+                unityExt.monoFrameworkDir.map { it.asFile.absolutePath }.getOrElse(null)
+        buildTask.extraArgs.get().any {
+            it.startsWith("/p:CustomBeforeMicrosoftCommonProps=") &&
+                    it.endsWith(".project-fixes.props")
+        }
     }
 }

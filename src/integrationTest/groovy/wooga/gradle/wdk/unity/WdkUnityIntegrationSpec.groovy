@@ -18,7 +18,6 @@
 package wooga.gradle.wdk.unity
 
 import spock.lang.Unroll
-import wooga.gradle.unity.UnityPlugin
 
 class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
 
@@ -127,6 +126,32 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME               | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "Android" | ["cleanTestBuild", "performTestBuildAndroid", "performTestBuildIOS", "performTestBuildWebGL"]
         WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME               | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "IOS"     | ["cleanTestBuild", "performTestBuildAndroid", "performTestBuildIOS", "performTestBuildWebGL"]
         WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME               | WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "WebGL"   | ["cleanTestBuild", "performTestBuildAndroid", "performTestBuildIOS", "performTestBuildWebGL"]
+        WdkUnityPlugin.SONARQUBE_BUILD_TASK_NAME                | "test"                                                  | ["test", "sonarBuildWDK"]
+        WdkUnityPlugin.SONARQUBE_TASK_NAME                      | "test"                                                  | ["test", "sonarqube"]
+        WdkUnityPlugin.SONARQUBE_TASK_NAME                      | WdkUnityPlugin.SONARQUBE_BUILD_TASK_NAME                | ["sonarBuildWDK", "sonarqube"]
+    }
+
+    @Unroll("verify that dependencies #dependencies are running before task #task")
+    def "verify that #task dependencies #dependencies are running"() {
+        given: "a paket.unity3d.references file with 'Wooga.AtlasBuildTools'"
+        def reference = createFile("paket.unity3d.references")
+        reference << """
+        Wooga.AtlasBuildTools
+        """.stripIndent()
+
+        when:
+        def result = runTasksSuccessfully(task, "--dry-run")
+
+        then:
+        def stdOut = result.standardOutput.substring(result.standardOutput.indexOf("Tasks to be executed:"))
+        dependencies.every { stdOut.contains(it) }
+        dependencies.collect{stdOut.indexOf(it)}.max() < stdOut.indexOf(task)
+
+
+        where:
+        task            | dependencies
+        ":sonarqube"     | [":test", ":sonarBuildWDK"]
+        ":sonarBuildWDK" | [":generateSolution"]
     }
 
     @Unroll

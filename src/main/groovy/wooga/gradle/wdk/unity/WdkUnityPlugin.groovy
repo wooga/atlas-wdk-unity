@@ -24,8 +24,8 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.file.FileCollection
-import org.gradle.api.internal.ConventionMapping
+import org.sonarqube.gradle.SonarQubeExtension
+import wooga.gradle.dotnetsonar.DotNetSonarqubePlugin
 import org.gradle.api.internal.file.FileResolver
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -41,6 +41,7 @@ import wooga.gradle.unity.UnityTask
 import wooga.gradle.unity.models.BuildTarget
 import wooga.gradle.unity.tasks.Unity
 import wooga.gradle.wdk.unity.actions.AndroidResourceCopyAction
+import wooga.gradle.wdk.unity.config.SonarQubeConfiguration
 import wooga.gradle.wdk.unity.tasks.DefaultResourceCopyTask
 import wooga.gradle.wdk.unity.actions.IOSResourceCopyAction
 import wooga.gradle.wdk.unity.actions.WebGLResourceCopyAction
@@ -68,6 +69,8 @@ class WdkUnityPlugin implements Plugin<Project> {
     static String CLEAN_TEST_BUILD_TASK_NAME = "cleanTestBuild"
     static String MOVE_EDITOR_DEPENDENCIES = "moveEditorDependencies"
     static String UN_MOVE_EDITOR_DEPENDENCIES = "unMoveEditorDependencies"
+    static String SONARQUBE_TASK_NAME = "sonarqube"
+    static String SONARQUBE_BUILD_TASK_NAME = "sonarBuildWDK"
 
     private final FileResolver fileResolver
     private final Instantiator instantiator
@@ -83,6 +86,7 @@ class WdkUnityPlugin implements Plugin<Project> {
 
         project.pluginManager.apply(BasePlugin.class)
         project.pluginManager.apply(UnityPlugin.class)
+        project.pluginManager.apply(DotNetSonarqubePlugin.class)
 
         WdkPluginExtension extension = project.extensions.create(WdkPluginExtension, EXTENSION_NAME, DefaultWdkPluginExtension, project)
 
@@ -93,10 +97,15 @@ class WdkUnityPlugin implements Plugin<Project> {
         addResourceCopyTasks(project)
         configureUnityTaskDependencies(project)
         createTestBuildTasks(project, extension)
+        configureSonarqubeTasks(project)
     }
+
+
 
     private static void configureExtension(Project project, WdkPluginExtension extension) {
         UnityPluginExtension unity = project.extensions.getByType(UnityPluginExtension)
+        unity.enableTestCodeCoverage.convention(true)
+
         extension.editorDependenciesToMoveDuringTestBuild("NSubstitute")
         extension.assetsDir.convention(unity.assetsDir.dir("Wooga"))
         extension.pluginsDir.convention(extension.assetsDir.dir("Plugins"))
@@ -285,5 +294,16 @@ class WdkUnityPlugin implements Plugin<Project> {
             def checkTask = project.tasks.getByName(LifecycleBasePlugin.CHECK_TASK_NAME)
             checkTask.dependsOn performTestBuildTask
         }
+    }
+
+    static void configureSonarqubeTasks(Project project) {
+        def unityExt = project.extensions.findByType(UnityPluginExtension)
+        def sonarExt = project.extensions.findByType(SonarQubeExtension)
+
+        new SonarQubeConfiguration(project).with {
+            sonarTaskName = SONARQUBE_TASK_NAME
+            buildTaskName = SONARQUBE_BUILD_TASK_NAME
+            return it
+        }.configure(unityExt, sonarExt)
     }
 }
