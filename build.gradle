@@ -41,7 +41,7 @@ github {
 }
 
 dependencies {
-    implementation "gradle.plugin.net.wooga.gradle:atlas-dotnet-sonarqube:0.1.0"
+    implementation "gradle.plugin.net.wooga.gradle:atlas-dotnet-sonarqube:0.2.0"
     implementation "gradle.plugin.net.wooga.gradle:atlas-unity:(2,3]"
     implementation "commons-io:commons-io:2.8.0"
 }
