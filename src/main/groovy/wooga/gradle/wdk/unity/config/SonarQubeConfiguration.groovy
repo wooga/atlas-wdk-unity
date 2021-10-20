@@ -41,7 +41,7 @@ class SonarQubeConfiguration {
             task.mustRunAfter(unityTestTask)
         }
         project.afterEvaluate { //needs to be done after evaluate to be able to fill reportsDir property
-            def assetsDir = unityExt.assetsDir.get().asFile.relativePath(unityExt.projectDirectory.get().asFile)
+            def assetsDir = unityExt.projectDirectory.get().asFile.relativePath(unityExt.assetsDir.get().asFile)
             def reportsDir = unityExt.reportsDir.get().asFile.path
             sonarExt.properties(sonarqubeUnityDefaults(assetsDir, reportsDir))
         }
