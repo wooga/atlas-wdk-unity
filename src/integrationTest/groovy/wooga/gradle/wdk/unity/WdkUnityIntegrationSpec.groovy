@@ -17,6 +17,8 @@
 
 package wooga.gradle.wdk.unity
 
+import com.wooga.gradle.test.PropertyQueryTaskWriter
+import org.gradle.api.file.Directory
 import spock.lang.Unroll
 
 class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
@@ -129,6 +131,8 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         WdkUnityPlugin.SONARQUBE_BUILD_TASK_NAME                | "test"                                                  | ["test", "sonarBuildWDK"]
         WdkUnityPlugin.SONARQUBE_TASK_NAME                      | "test"                                                  | ["test", "sonarqube"]
         WdkUnityPlugin.SONARQUBE_TASK_NAME                      | WdkUnityPlugin.SONARQUBE_BUILD_TASK_NAME                | ["sonarBuildWDK", "sonarqube"]
+        // TODO: Won't work unless it's properly set, sadly
+        //WdkUnityPlugin.GENERATE_UPM_PACKAGE_TASK_NAME           | WdkUnityPlugin.GENERATE_META_FILES_TASK_NAME            | ["upmPack"]
     }
 
     @Unroll("verify that dependencies #dependencies are running before task #task")
@@ -145,11 +149,11 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         then:
         def stdOut = result.standardOutput.substring(result.standardOutput.indexOf("Tasks to be executed:"))
         dependencies.every { stdOut.contains(it) }
-        dependencies.collect{stdOut.indexOf(it)}.max() < stdOut.indexOf(task)
+        dependencies.collect { stdOut.indexOf(it) }.max() < stdOut.indexOf(task)
 
 
         where:
-        task            | dependencies
+        task             | dependencies
         ":sonarqube"     | [":test", ":sonarBuildWDK"]
         ":sonarBuildWDK" | [":generateSolution"]
     }
@@ -238,4 +242,34 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         expect:
         runTasksWithFailure(WdkUnityPlugin.MOVE_EDITOR_DEPENDENCIES)
     }
+
+    @Unroll
+    def "deduces package directory if #reason"() {
+
+        given:
+        File packageDirectory = null
+        // In this test we assume we are starting from the root of the unity project
+        if (set){
+            def assetsDirectory = directory("Assets")
+            def woogaDirectory = directory("Wooga", assetsDirectory)
+            packageDirectory = directory("Foobar", woogaDirectory)
+        }
+
+        when:
+        def query = new PropertyQueryTaskWriter("wdk.packageDirectory")
+        query.write(buildFile)
+        def result = runTasksSuccessfully(query.taskName)
+
+        then:
+        set ? query.matches(result, packageDirectory.path) : query.matches(result, "null")
+
+        where:
+        set << [true, false]
+        reason = set ? "set according to convention" : "not set"
+
+
+    }
+
+
 }
+

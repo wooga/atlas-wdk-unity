@@ -20,7 +20,10 @@ package wooga.gradle.wdk.unity
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.MapProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.Input
 import org.gradle.internal.impldep.org.eclipse.jgit.errors.NotSupportedException
 import org.gradle.util.GUtil
 
@@ -44,7 +47,11 @@ abstract class WdkPluginExtension {
         pluginsDir.set(value)
     }
 
+    // TODO: Rename to 'woogaAssetsDir' maybe?
     private final DirectoryProperty assetsDir = objects.directoryProperty()
+    /**
+     * @return The directory within the Unity project that contains the wdk assets. By convention within 'Assets/Wooga'
+     */
     DirectoryProperty getAssetsDir() {
         assetsDir
     }
@@ -96,5 +103,23 @@ abstract class WdkPluginExtension {
     void setEditorDependenciesToMoveDuringTestBuild(Iterable<String> dependencies) {
         editorDependeciesToMoveDuringTestBuild.clear()
         editorDependeciesToMoveDuringTestBuild.addAll(dependencies)
+    }
+
+    private final DirectoryProperty packageDirectory = objects.directoryProperty()
+    /**
+     * @return The directory where the UPM package sources of the WDK are located.
+     * At its root, it must contain a package manifest file (package.json) file.
+     */
+    DirectoryProperty getPackageDirectory() {
+        packageDirectory
+    }
+
+    private final Property<Boolean> generateMetaFiles = objects.property(Boolean)
+    @Input
+    Property<Boolean> getGenerateMetaFiles() {
+        generateMetaFiles
+    }
+    void setGenerateMetaFiles(Provider<Boolean> value) {
+        generateMetaFiles.set(value)
     }
 }

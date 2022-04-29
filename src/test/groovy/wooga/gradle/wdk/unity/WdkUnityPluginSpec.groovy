@@ -25,6 +25,7 @@ import wooga.gradle.dotnetsonar.SonarScannerExtension
 import wooga.gradle.dotnetsonar.tasks.BuildSolution
 import wooga.gradle.unity.UnityPlugin
 import wooga.gradle.unity.UnityPluginExtension
+import wooga.gradle.unity.tasks.GenerateUpmPackage
 import wooga.gradle.wdk.unity.tasks.ResourceCopyTask
 
 class WdkUnityPluginSpec extends ProjectSpec {
@@ -66,6 +67,7 @@ class WdkUnityPluginSpec extends ProjectSpec {
         WdkUnityPlugin.SETUP_TASK_NAME                      | DefaultTask
         WdkUnityPlugin.SONARQUBE_BUILD_TASK_NAME            | BuildSolution
         WdkUnityPlugin.SONARQUBE_TASK_NAME                  | DefaultTask
+        WdkUnityPlugin.GENERATE_UPM_PACKAGE_TASK_NAME       | GenerateUpmPackage
     }
 
     @Unroll
@@ -138,10 +140,10 @@ class WdkUnityPluginSpec extends ProjectSpec {
         buildTask.solution.get().asFile == new File(projectDir, "${project.name}.sln")
         buildTask.dotnetExecutable.getOrElse(null) == unityExt.dotnetExecutable.getOrElse(null)
         buildTask.environment.getting("FrameworkPathOverride").getOrElse(null) ==
-                unityExt.monoFrameworkDir.map { it.asFile.absolutePath }.getOrElse(null)
+            unityExt.monoFrameworkDir.map { it.asFile.absolutePath }.getOrElse(null)
         buildTask.extraArgs.get().any {
             it.startsWith("/p:CustomBeforeMicrosoftCommonProps=") &&
-                    it.endsWith(".project-fixes.props")
+                it.endsWith(".project-fixes.props")
         }
     }
 }

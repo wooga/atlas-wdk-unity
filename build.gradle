@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Wooga GmbH
+ * Copyright 2018-2022 Wooga GmbH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,11 @@ plugins {
     id "net.wooga.cve-dependency-resolution" version "0.4.0"
 }
 
+repositories  {
+    mavenLocal()
+    mavenCentral()
+}
+
 group 'net.wooga.gradle'
 description = 'Plugin for wooga unity package development.'
 
@@ -33,7 +38,7 @@ pluginBundle {
 
 gradlePlugin {
     plugins {
-        plugins {
+        wdkUnity {
             id = 'net.wooga.wdk-unity'
             displayName = 'Wooga internal plugin to help setup depencencies for unity packages'
             description = 'This plugin provides tasks to define and copy development dependencies into the Unity3D project'
@@ -52,7 +57,15 @@ cveHandler {
 
 dependencies {
     implementation "net.wooga.gradle:dotnet-sonarqube:[0.4,0.5["
-    implementation "net.wooga.gradle:unity:[3,4["
+    implementation "net.wooga.gradle:unity:[3.1,4["
     implementation "commons-io:commons-io:2.11.0"
     implementation 'com.wooga.gradle:gradle-commons:[1,2['
+
+    implementation "org.jfrog.buildinfo:build-info-extractor-gradle:4.28.2"
+
+    testImplementation 'com.wooga.gradle:gradle-commons-test:[1,2)'
+    testImplementation('org.jfrog.artifactory.client:artifactory-java-client-services:[2,3)') {
+        exclude module: 'logback-classic'
+    }
+    testImplementation 'org.apache.httpcomponents:httpclient:4.5.13'
 }
