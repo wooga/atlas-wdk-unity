@@ -21,4 +21,4 @@ pluginManagement {
   }
 }
 
-rootProject.name = 'atlas-wdk-unity'
+rootProject.name = 'wdk-unity'
