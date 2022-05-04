@@ -16,11 +16,10 @@
  */
 
 plugins {
-    id 'net.wooga.plugins' version '2.3.0'
+    id 'net.wooga.plugins' version '3.2.0'
     id 'net.wooga.snyk' version '0.10.0'
     id "net.wooga.snyk-gradle-plugin" version "0.2.0"
     id "net.wooga.cve-dependency-resolution" version "0.4.0"
-    
 }
 
 group 'net.wooga.gradle'
@@ -30,12 +29,15 @@ pluginBundle {
     website = 'https://wooga.github.io/atlas-wdk-unity/'
     vcsUrl = 'https://github.com/wooga/atlas-wdk-unity'
     tags = ['Unity3D', 'wooga', 'package', 'wdk']
+}
 
+gradlePlugin {
     plugins {
         plugins {
             id = 'net.wooga.wdk-unity'
             displayName = 'Wooga internal plugin to help setup depencencies for unity packages'
             description = 'This plugin provides tasks to define and copy development dependencies into the Unity3D project'
+            implementationClass = 'wooga.gradle.wdk.unity.WdkUnityPlugin'
         }
     }
 }
@@ -49,7 +51,8 @@ cveHandler {
 }
 
 dependencies {
-    implementation "gradle.plugin.net.wooga.gradle:atlas-dotnet-sonarqube:[0.2,0.3["
-    implementation "gradle.plugin.net.wooga.gradle:atlas-unity:[2,3["
+    implementation "net.wooga.gradle:dotnet-sonarqube:[0.4,0.5["
+    implementation "net.wooga.gradle:unity:[3,4["
     implementation "commons-io:commons-io:2.11.0"
+    implementation 'com.wooga.gradle:gradle-commons:[1,2['
 }
