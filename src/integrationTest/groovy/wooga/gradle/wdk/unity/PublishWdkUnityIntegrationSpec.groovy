@@ -41,8 +41,12 @@ class PublishWdkUnityIntegrationSpec extends com.wooga.gradle.test.IntegrationSp
         """.stripIndent()
     }
 
+    def getCredentials() {
+        System.getenv("repositoryCredentials") ?: System.getenv("atlas_upm_integration_user")
+    }
+
     def setupSpec() {
-        String artifactoryCredentials = System.getenv("artifactoryCredentials")
+        String artifactoryCredentials = getCredentials()
         assert artifactoryCredentials
         def credentials = artifactoryCredentials.split(':')
         artifactory = ArtifactoryClientBuilder.create()
@@ -89,10 +93,10 @@ class PublishWdkUnityIntegrationSpec extends com.wooga.gradle.test.IntegrationSp
         assert packageDir.exists()
 
         and: "configuration of the main plugin and the artifactory plugin"
-        String nugetKey = System.getenv("NUGET_KEY")
-        assert nugetKey
-        def userName = nugetKey.split(":").first()
-        def password = nugetKey.split(":").last()
+        String repositoryCredentials = getCredentials()
+        assert repositoryCredentials
+        def userName = repositoryCredentials.split(":").first()
+        def password = repositoryCredentials.split(":").last()
         buildFile << """
 wdk {
 generateMetaFiles.set(false)

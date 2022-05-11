@@ -17,7 +17,6 @@
 
 package wooga.gradle.wdk.unity
 
-
 import org.apache.commons.io.FileUtils
 import org.gradle.api.Action
 import org.gradle.api.Plugin
@@ -25,40 +24,37 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.Directory
+import org.gradle.api.internal.file.FileResolver
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging
+import org.gradle.api.plugins.BasePlugin
+import org.gradle.api.provider.Provider
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.ivy.IvyPublication
 import org.gradle.api.publish.ivy.plugins.IvyPublishPlugin
 import org.gradle.api.publish.plugins.PublishingPlugin
+import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.TaskProvider
+import org.gradle.internal.reflect.Instantiator
+import org.gradle.language.base.plugins.LifecycleBasePlugin
 import org.jfrog.gradle.plugin.artifactory.ArtifactoryPlugin
 import org.jfrog.gradle.plugin.artifactory.dsl.ArtifactoryPluginConvention
 import org.jfrog.gradle.plugin.artifactory.dsl.PublisherConfig
 import org.jfrog.gradle.plugin.artifactory.task.ArtifactoryTask
 import org.sonarqube.gradle.SonarQubeExtension
 import wooga.gradle.dotnetsonar.DotNetSonarqubePlugin
-import org.gradle.api.internal.file.FileResolver
-import org.gradle.api.logging.Logger
-import org.gradle.api.logging.Logging
-import org.gradle.api.plugins.BasePlugin
-import org.gradle.api.tasks.Delete
-import org.gradle.api.tasks.TaskContainer
-import org.gradle.api.tasks.TaskProvider
-import org.gradle.internal.reflect.Instantiator
-import org.gradle.language.base.plugins.LifecycleBasePlugin
 import wooga.gradle.unity.UnityPlugin
 import wooga.gradle.unity.UnityPluginExtension
 import wooga.gradle.unity.UnityTask
-import wooga.gradle.unity.models.BuildTarget
 import wooga.gradle.unity.tasks.GenerateUpmPackage
 import wooga.gradle.unity.tasks.Unity
 import wooga.gradle.wdk.unity.actions.AndroidResourceCopyAction
-import wooga.gradle.wdk.unity.config.SonarQubeConfiguration
-import wooga.gradle.wdk.unity.tasks.DefaultResourceCopyTask
 import wooga.gradle.wdk.unity.actions.IOSResourceCopyAction
 import wooga.gradle.wdk.unity.actions.WebGLResourceCopyAction
+import wooga.gradle.wdk.unity.config.SonarQubeConfiguration
+import wooga.gradle.wdk.unity.tasks.DefaultResourceCopyTask
 
 import javax.inject.Inject
-import java.security.cert.Extension
-import java.util.concurrent.Callable
 
 class WdkUnityPlugin implements Plugin<Project> {
 
@@ -78,8 +74,8 @@ class WdkUnityPlugin implements Plugin<Project> {
     static String WEBGL_RESOURCES_CONFIGURATION_NAME = "webgl"
     static String RUNTIME_CONFIGURATION_NAME = "runtime"
 
-    static String GENERATE_UPM_PACKAGE_TASK_NAME = "upmPack"
-    static String GENERATE_META_FILES_TASK_NAME = "generateMetaFiles"
+    private static String GENERATE_UPM_PACKAGE_TASK_NAME = "upmPack"
+    private static String GENERATE_META_FILES_TASK_NAME = "generateMetaFiles"
 
     static String PERFORM_TEST_BUILD_TASK_NAME = "performTestBuild"
     static String CLEAN_TEST_BUILD_TASK_NAME = "cleanTestBuild"
@@ -135,21 +131,7 @@ class WdkUnityPlugin implements Plugin<Project> {
         extension.generateMetaFiles.convention(true)
         // Try tp deduce the package directory within the Unity assets directories, where the root of the sources of the wdk are
         // For example: Assets/Wooga/Foobar/*
-        extension.packageDirectory.convention(project.provider({
-            Directory result = null
-            if (extension.assetsDir.present) {
-                def woogaDir = extension.assetsDir.get()
-                def files = woogaDir.asFile.listFiles()
-                if (files != null &&  files.length == 1 && files[0].isDirectory()) {
-                    def packageDir = files[0]
-                    result = woogaDir.dir(packageDir.name)
-                }
-            }
-            if (result == null) {
-                logger.warn("Could not deduce the package directory for this wdk")
-            }
-            result
-        }))
+        extension.packageDirectory.convention(deducePackageDirectory(project, extension))
     }
 
     private static void addLifecycleTasks(Project project) {
@@ -353,7 +335,7 @@ class WdkUnityPlugin implements Plugin<Project> {
             it.group = group
         }
         def upmPack = project.tasks.register(GENERATE_UPM_PACKAGE_TASK_NAME, GenerateUpmPackage) {
-            if (extension.generateMetaFiles.present && extension.generateMetaFiles.get()){
+            if (extension.generateMetaFiles.present && extension.generateMetaFiles.get()) {
                 it.dependsOn(upmGenerateMetaFiles)
             }
             it.group = group
@@ -402,7 +384,34 @@ class WdkUnityPlugin implements Plugin<Project> {
             def rootPublishTask = project.rootProject.tasks.getByName(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME)
             rootPublishTask.dependsOn(publishTask)
         }
+    }
 
-
+    private static Provider<Directory> deducePackageDirectory(Project project, WdkPluginExtension extension) {
+        project.provider({
+            Directory result = null
+            // Start at $Project/Assets/Wooga
+            if (extension.assetsDir.present) {
+                def woogaDir = extension.assetsDir.get()
+                // Search for a directory that contains a package.json file
+                def tree = woogaDir.asFileTree
+                def manifestFiles = tree.filter({ File file -> file.name == "package.json" })
+                switch (manifestFiles.size()){
+                    case 1:
+                        def manifest = manifestFiles.first()
+                        result = woogaDir.dir(manifest.parentFile.path)
+                        break
+                    case 0:
+                        logger.warn("No package manifest files (package.json) were found")
+                        break
+                    default:
+                        logger.warn("More then one package manifest file (package.json) was found")
+                        break
+                }
+            }
+            if (result == null) {
+                logger.warn("Could not deduce the package directory for this wdk")
+            }
+            result
+        })
     }
 }

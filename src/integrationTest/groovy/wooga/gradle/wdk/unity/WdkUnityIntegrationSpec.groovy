@@ -20,6 +20,8 @@ package wooga.gradle.wdk.unity
 import com.wooga.gradle.test.PropertyQueryTaskWriter
 import org.gradle.api.file.Directory
 import spock.lang.Unroll
+import wooga.gradle.unity.tasks.GenerateUpmPackage
+import wooga.gradle.unity.utils.PackageManifestBuilder
 
 class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
 
@@ -131,8 +133,6 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         WdkUnityPlugin.SONARQUBE_BUILD_TASK_NAME                | "test"                                                  | ["test", "sonarBuildWDK"]
         WdkUnityPlugin.SONARQUBE_TASK_NAME                      | "test"                                                  | ["test", "sonarqube"]
         WdkUnityPlugin.SONARQUBE_TASK_NAME                      | WdkUnityPlugin.SONARQUBE_BUILD_TASK_NAME                | ["sonarBuildWDK", "sonarqube"]
-        // TODO: Won't work unless it's properly set, sadly
-        //WdkUnityPlugin.GENERATE_UPM_PACKAGE_TASK_NAME           | WdkUnityPlugin.GENERATE_META_FILES_TASK_NAME            | ["upmPack"]
     }
 
     @Unroll("verify that dependencies #dependencies are running before task #task")
@@ -249,10 +249,15 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         given:
         File packageDirectory = null
         // In this test we assume we are starting from the root of the unity project
-        if (set){
+        if (set) {
             def assetsDirectory = directory("Assets")
             def woogaDirectory = directory("Wooga", assetsDirectory)
             packageDirectory = directory("Foobar", woogaDirectory)
+            if (manifestExists) {
+                PackageManifestBuilder manifest = new PackageManifestBuilder("com.wooga.foobar", "1.0")
+                def manifestFile = file("package.json", packageDirectory)
+                manifestFile.write(manifest.build())
+            }
         }
 
         when:
@@ -261,11 +266,13 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         def result = runTasksSuccessfully(query.taskName)
 
         then:
-        set ? query.matches(result, packageDirectory.path) : query.matches(result, "null")
+        valid ? query.matches(result, packageDirectory.path) : query.matches(result, "null")
 
         where:
-        set << [true, false]
-        reason = set ? "set according to convention" : "not set"
+        set   | manifestExists | valid | reason
+        true  | true           | true  | "set according to convention"
+        true  | false          | false | "missing manifest file"
+        false | true           | false | "not set"
 
 
     }
