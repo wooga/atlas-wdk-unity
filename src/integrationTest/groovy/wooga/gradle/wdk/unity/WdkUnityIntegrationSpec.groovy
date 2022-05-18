@@ -17,7 +17,11 @@
 
 package wooga.gradle.wdk.unity
 
+import com.wooga.gradle.test.PropertyQueryTaskWriter
+import org.gradle.api.file.Directory
 import spock.lang.Unroll
+import wooga.gradle.unity.tasks.GenerateUpmPackage
+import wooga.gradle.unity.utils.PackageManifestBuilder
 
 class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
 
@@ -145,11 +149,11 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         then:
         def stdOut = result.standardOutput.substring(result.standardOutput.indexOf("Tasks to be executed:"))
         dependencies.every { stdOut.contains(it) }
-        dependencies.collect{stdOut.indexOf(it)}.max() < stdOut.indexOf(task)
+        dependencies.collect { stdOut.indexOf(it) }.max() < stdOut.indexOf(task)
 
 
         where:
-        task            | dependencies
+        task             | dependencies
         ":sonarqube"     | [":test", ":sonarBuildWDK"]
         ":sonarBuildWDK" | [":generateSolution"]
     }
@@ -238,4 +242,41 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         expect:
         runTasksWithFailure(WdkUnityPlugin.MOVE_EDITOR_DEPENDENCIES)
     }
+
+    @Unroll
+    def "deduces package directory if #reason"() {
+
+        given:
+        File packageDirectory = null
+        // In this test we assume we are starting from the root of the unity project
+        if (set) {
+            def assetsDirectory = directory("Assets")
+            def woogaDirectory = directory("Wooga", assetsDirectory)
+            packageDirectory = directory("Foobar", woogaDirectory)
+            if (manifestExists) {
+                PackageManifestBuilder manifest = new PackageManifestBuilder("com.wooga.foobar", "1.0")
+                def manifestFile = file("package.json", packageDirectory)
+                manifestFile.write(manifest.build())
+            }
+        }
+
+        when:
+        def query = new PropertyQueryTaskWriter("wdk.packageDirectory")
+        query.write(buildFile)
+        def result = runTasksSuccessfully(query.taskName)
+
+        then:
+        valid ? query.matches(result, packageDirectory.path) : query.matches(result, "null")
+
+        where:
+        set   | manifestExists | valid | reason
+        true  | true           | true  | "set according to convention"
+        true  | false          | false | "missing manifest file"
+        false | true           | false | "not set"
+
+
+    }
+
+
 }
+
