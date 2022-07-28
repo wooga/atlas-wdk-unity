@@ -15,10 +15,12 @@
  *
  */
 
-package wooga.gradle.wdk.unity
+package wooga.gradle.wdk
 
 import groovy.json.StringEscapeUtils
 import wooga.gradle.unity.utils.ProjectSettingsFile
+import wooga.gradle.wdk.unity.IntegrationSpec
+import wooga.gradle.wdk.unity.WdkUnityPlugin
 
 abstract class UnityIntegrationSpec extends IntegrationSpec {
 

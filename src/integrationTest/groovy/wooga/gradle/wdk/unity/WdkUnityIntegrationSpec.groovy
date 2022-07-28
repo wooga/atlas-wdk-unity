@@ -18,10 +18,9 @@
 package wooga.gradle.wdk.unity
 
 import com.wooga.gradle.test.PropertyQueryTaskWriter
-import org.gradle.api.file.Directory
 import spock.lang.Unroll
-import wooga.gradle.unity.tasks.GenerateUpmPackage
 import wooga.gradle.unity.utils.PackageManifestBuilder
+import wooga.gradle.wdk.UnityIntegrationSpec
 
 class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
 
@@ -292,6 +291,7 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         upmTaskName = "upmPack"
         generateMetaFilesTaskName = "generateMetaFiles"
     }
+
 
 
 }

@@ -326,69 +326,64 @@ class WdkUnityPlugin implements Plugin<Project> {
     }
 
     private static void configureUpmPublish(Project project, WdkPluginExtension extension) {
-
-        def unityExtension = project.extensions.getByType(UnityPluginExtension)
-        def group = "UPM"
-
-        // Create the tasks
-        def upmGenerateMetaFiles = project.tasks.register(GENERATE_META_FILES_TASK_NAME, Unity) {
-            it.group = group
-        }
-        def upmPack = project.tasks.register(GENERATE_UPM_PACKAGE_TASK_NAME, GenerateUpmPackage) {
-            if (extension.generateMetaFiles.present && extension.generateMetaFiles.get()) {
-                it.dependsOn(upmGenerateMetaFiles)
-            }
-            it.group = group
-            it.packageDirectory.convention(extension.packageDirectory)
-        }
-
-        upmGenerateMetaFiles.configure({
-            it.onlyIf {
-                upmPack.get().onlyIf.isSatisfiedBy(upmPack.get())
-            }
-        })
-
-
-        // Create the configuration
-        def config = project.configurations.maybeCreate(WdkUnityPluginConventions.upmConfigurationName)
-        config.transitive = false
-        def upmArtifact = project.artifacts.add(WdkUnityPluginConventions.upmConfigurationName, upmPack)
-
-        // Create the publication object
-        def publishing = project.extensions.getByType(PublishingExtension)
-        def upmPublication = publishing.publications.maybeCreate(WdkUnityPluginConventions.upmPublicationName, IvyPublication)
-        // TODO: Try to adjust? It has to be evaluated later
-        project.afterEvaluate {
-            upmPublication.setModule(upmPack.flatMap({ it.packageName }).getOrNull())
-        }
-
-        upmPublication.artifact(upmArtifact)
-
-        // Configure the artifactory plugin
-        // Some properties, such as 'contextUrl', `publish.repository.repoKey|username|password` have to be configured by the user
-        def artifactory = (ArtifactoryPluginConvention) project.convention.plugins.get("artifactory")
-        artifactory.publish { PublisherConfig publisherConfig ->
-            publisherConfig.repository { repo ->
-                repo.ivy { PublisherConfig.Repository it ->
-                    it.artifactLayout = '[module]/-/[module]-[revision].[ext]'
-                    it.mavenCompatible = false
-                }
-            }
-        }
-
-        project.tasks.withType(ArtifactoryTask).configureEach({ defaultTask ->
-            defaultTask.publications(WdkUnityPluginConventions.upmPublicationName)
-            defaultTask.publishArtifacts = false
-            defaultTask.publishIvy = false
-        })
-
-        project.afterEvaluate {
-            def publishTask = project.tasks.getByName(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME)
-            if(upmPack.get().onlyIf.isSatisfiedBy(upmPack.get())) {
-                def artifactoryPublishTask = project.tasks.named("artifactoryPublish")
-                publishTask.dependsOn(artifactoryPublishTask)
-            }
-        }
+//
+//        def unityExtension = project.extensions.getByType(UnityPluginExtension)
+//        def group = "UPM"
+//
+//        // Create the tasks
+//        def upmGenerateMetaFiles = project.tasks.register(GENERATE_META_FILES_TASK_NAME, Unity) {
+//            it.group = group
+//        }
+//        def upmPack = project.tasks.register(GENERATE_UPM_PACKAGE_TASK_NAME, GenerateUpmPackage) {
+//            if (extension.generateMetaFiles.present && extension.generateMetaFiles.get()) {
+//                it.dependsOn(upmGenerateMetaFiles)
+//            }
+//            it.group = group
+//            it.packageDirectory.convention(extension.packageDirectory)
+//        }
+//
+//        // Create the configuration
+//        def config = project.configurations.maybeCreate(WdkUnityPluginConventions.upmConfigurationName)
+//        config.transitive = false
+//        def upmArtifact = project.artifacts.add(WdkUnityPluginConventions.upmConfigurationName, upmPack)
+//
+//        // Create the publication object
+//        def publishing = project.extensions.getByType(PublishingExtension)
+//        def upmPublication = publishing.publications.maybeCreate(WdkUnityPluginConventions.upmPublicationName, IvyPublication)
+//        // TODO: Try to adjust? It has to be evaluated later
+//        project.afterEvaluate {
+//            upmPublication.setModule(upmPack.flatMap({ it.packageName }).getOrNull())
+//        }
+//
+//        upmPublication.artifact(upmArtifact)
+//
+//        // Configure the artifactory plugin
+//        // Some properties, such as 'contextUrl', `publish.repository.repoKey|username|password` have to be configured by the user
+//        def artifactory = (ArtifactoryPluginConvention) project.convention.plugins.get("artifactory")
+//        artifactory.publish { PublisherConfig publisherConfig ->
+//            publisherConfig.repository { repo ->
+//                repo.ivy { PublisherConfig.Repository it ->
+//                    it.artifactLayout = '[module]/-/[module]-[revision].[ext]'
+//                    it.mavenCompatible = false
+//                }
+//            }
+//        }
+//
+//        project.tasks.withType(ArtifactoryTask).configureEach({ defaultTask ->
+//            defaultTask.publications(WdkUnityPluginConventions.upmPublicationName)
+//            defaultTask.publishArtifacts = false
+//            defaultTask.publishIvy = false
+//        })
+//
+//        // Configure the publishing task dependencies
+//        def artifactoryPublishTask = project.tasks.getByName("artifactoryPublish")
+//        def publishTask = project.tasks.getByName(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME)
+//        publishTask.dependsOn(artifactoryPublishTask)
+//
+//        if (project.rootProject != project) {
+//            def rootPublishTask = project.rootProject.tasks.getByName(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME)
+//            rootPublishTask.dependsOn(publishTask)
+//        }
     }
 
     private static Provider<Directory> deducePackageDirectory(Project project, WdkPluginExtension extension) {

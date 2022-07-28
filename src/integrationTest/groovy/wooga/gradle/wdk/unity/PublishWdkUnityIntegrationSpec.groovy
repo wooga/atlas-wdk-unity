@@ -41,8 +41,10 @@ class PublishWdkUnityIntegrationSpec extends IntegrationSpec {
         """.stripIndent()
     }
 
-    def getCredentials() {
-        System.getenv("repositoryCredentials") ?: System.getenv("atlas_upm_integration_user")
+    String getCredentials() {
+        def usr = System.getenv("ATLAS_ARTIFACTORY_INTEGRATION_USER")
+        def pwd = System.getenv("ATLAS_ARTIFACTORY_INTEGRATION_PASSWORD")
+        return "$usr:${pwd}"
     }
 
     def setupSpec() {
