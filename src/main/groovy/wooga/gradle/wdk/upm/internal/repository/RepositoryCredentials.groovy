@@ -1,4 +1,4 @@
-package wooga.gradle.wdk.upm.internal.repository.internal
+package wooga.gradle.wdk.upm.internal.repository
 
 class RepositoryCredentials {
     

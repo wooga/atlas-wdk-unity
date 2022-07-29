@@ -3,22 +3,14 @@ package wooga.gradle.wdk.upm
 import org.gradle.api.file.Directory
 import org.jfrog.artifactory.client.model.RepoPath
 import spock.lang.Unroll
-import wooga.gradle.unity.utils.PackageManifestBuilder
-import wooga.gradle.wdk.unity.WdkUnityPlugin
-
-import java.util.stream.IntStream
 
 import static com.wooga.gradle.test.PropertyUtils.wrapValueBasedOnType
 
 class UPMPluginIntegrationSpec extends UPMIntegrationSpec {
 
-    private final String DEFAULT_VERSION = "0.0.1"
-
     def setup() {
         buildFile << """
-            ${applyPlugin(WdkUnityPlugin)}
             ${applyPlugin(UPMPlugin)}
-        
         """.stripIndent()
     }
 
@@ -62,10 +54,9 @@ class UPMPluginIntegrationSpec extends UPMIntegrationSpec {
         hasMetafilesMsg = projectWithMetafiles ? "with" : "without"
     }
 
-    def "publishes folder as UPM package with extension credentials"() {
+    def "publishes folder as UPM package"() {
         given: "existing UPM-ready folder"
-        def packageVersion = "0.0.1"
-        def packageName = "upm-package-name"
+
         writeTestPackage(upmPackageFolder, packageName, packageVersion)
         and: "artifactory credentials"
         def (username, password) = credentialsFromEnv()
@@ -97,33 +88,58 @@ class UPMPluginIntegrationSpec extends UPMIntegrationSpec {
         where:
         upmPackageFolder     | repositoryName
         "Assets/upm-package" | "integration"
+        packageVersion = "0.0.1"
+        packageName = "upm-package-name"
     }
 
-    def "publishes folder as UPM package to protected repository"() {
-        given:
-        when:
-        then:
-        where:
-        username | password
-        ""       | ""
-    }
 
-    File writeTestPackage(String packageDirectory, String packageName, String packageVersion = DEFAULT_VERSION, boolean hasMetafiles = true, int fileCount = 1) {
-        def packageDir = directory(packageDirectory)
-        def packageManifestFile = file("package.json", packageDir)
-        if (hasMetafiles) {
-            file("package.json.meta", packageDir).write("META")
-        }
-        packageManifestFile.write(new PackageManifestBuilder(packageName, packageVersion).build())
-        IntStream.range(0, fileCount).forEach {
-            def baseName = "Sample$fileCount".toString()
-            file("${baseName}.cs", packageDir).write("class ${baseName} {}")
-            if (hasMetafiles) {
-                file("${baseName}.cs.meta", packageDir).write("META")
+    //TODO: this can be an extension centered unit test now.
+    @Unroll("publishes folder as UPM package to protected repository withn credentials set in #location")
+    def "publishes folder as UPM package to protected repository withn credentials set in {location}"() {
+        given: "existing UPM-ready folder"
+        writeTestPackage(packageDirectory, packageName)
+        and: "artifactory credentials"
+        def (username, password) = credentialsFromEnv()
+        and: "configured package dir and repository"
+        buildFile << """
+        publishing {
+            repositories {
+                upm {
+                    url = ${wrapValueBasedOnType(artifactoryURL(WOOGA_ARTIFACTORY_CI_REPO), String)}
+                    name = "integration"
+                    ${ location == "repository"? """
+                        credentials {
+                            username = ${wrapValueBasedOnType(username, String)}
+                            password = ${wrapValueBasedOnType(password, String)}
+                        }
+                        """: ""}
+                }
             }
         }
-        return packageDir
+        upm {
+            packageDirectory = ${wrapValueBasedOnType(packageDirectory, Directory)}
+            version = ${wrapValueBasedOnType(DEFAULT_VERSION, String)}
+            repository = "integration"
+            ${ location == "extension"? """ 
+                    username = ${wrapValueBasedOnType(username, String)}
+                    password = ${wrapValueBasedOnType(password, String)}""" : ""} 
+        }
+        """
+
+        when:
+        def r = runTasks( "publish")
+
+        then:
+        r.success
+        hasPackageOnArtifactory(WOOGA_ARTIFACTORY_CI_REPO, packageName)
+
+        where:
+        location << ["extension", "repository"]
+        packageDirectory = "Assets/upm"
+        packageName = "packageName"
     }
+
+
 
     boolean hasPackageOnArtifactory(String repoName, String artifactName, String artifactVersion = DEFAULT_VERSION) {
         List<RepoPath> packages = artifactory.searches()

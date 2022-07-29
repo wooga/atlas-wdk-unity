@@ -9,20 +9,20 @@ import org.gradle.api.internal.plugins.PluginRegistry
 import org.gradle.api.logging.Logger
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.ivy.IvyPublication
+import org.gradle.api.publish.ivy.plugins.IvyPublishPlugin
 import org.gradle.api.publish.plugins.PublishingPlugin
 import org.gradle.api.tasks.TaskProvider
+import org.jfrog.gradle.plugin.artifactory.ArtifactoryPlugin
 import org.jfrog.gradle.plugin.artifactory.dsl.ArtifactoryPluginConvention
 import org.jfrog.gradle.plugin.artifactory.dsl.PublisherConfig
 import org.jfrog.gradle.plugin.artifactory.task.ArtifactoryTask
 import wooga.gradle.unity.tasks.GenerateUpmPackage
 import wooga.gradle.unity.tasks.Unity
 import wooga.gradle.wdk.unity.WdkUnityPluginConventions
-import wooga.gradle.wdk.upm.internal.UnityMetafileDetector
-import wooga.gradle.wdk.upm.internal.repository.internal.DefaultUPMRepositoryHandlerConvention
-import wooga.gradle.wdk.upm.internal.repository.internal.UPMArtifactRepository
+import wooga.gradle.wdk.upm.internal.UnityProjects
+import wooga.gradle.wdk.upm.internal.repository.DefaultUPMRepositoryHandlerConvention
 
 import javax.inject.Inject
-import java.util.stream.Collectors
 
 class UPMPlugin implements Plugin<Project> {
 
@@ -40,7 +40,11 @@ class UPMPlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
-        def extension = UPMPublishExtension.newWithConventions(project, EXTENSION_NAME)
+        project.plugins.apply(ArtifactoryPlugin.class)
+        project.plugins.apply(IvyPublishPlugin.class)
+
+        def publishingExt = project.extensions.getByType(PublishingExtension)
+        def extension = UPMExtension.newWithPublishingConventions(project, publishingExt, EXTENSION_NAME)
 
         //this generate unity meta files, sounds like it belongs to atlas-unity
         def upmGenerateMetaFiles = project.tasks.register(GENERATE_META_FILES_TASK_NAME, Unity) {
@@ -65,11 +69,9 @@ class UPMPlugin implements Plugin<Project> {
 
     private static IvyPublication configureUpmPublish(Project project, TaskProvider<GenerateUpmPackage> upmPack) {
         //Extends the publishing extension to be able to hold upm repositories
-        Project p = project
         project.extensions.configure(PublishingExtension, { PublishingExtension e ->
             def upmHandlerConvention = new DefaultUPMRepositoryHandlerConvention(e.repositories as DefaultRepositoryHandler)
-//            def upmPluginId = pluginRegistry.inspect(UPMPlugin).pluginId.id
-            p.convention.plugins.put(UPMPlugin.canonicalName, upmHandlerConvention)
+            project.convention.plugins.put(UPMPlugin.canonicalName, upmHandlerConvention)
             new DslObject(e.repositories).convention.plugins.put(UPMPlugin.canonicalName, upmHandlerConvention)
         })
 
@@ -79,9 +81,9 @@ class UPMPlugin implements Plugin<Project> {
         def upmArtifact = project.artifacts.add(WdkUnityPluginConventions.upmConfigurationName, upmPack)
         def publishing = project.extensions.getByType(PublishingExtension)
         def upmPublication = publishing.publications.maybeCreate(WdkUnityPluginConventions.upmPublicationName, IvyPublication).with { publication ->
-            project.afterEvaluate {
-                publication.module = upmPack.flatMap { it.packageName }.get()
-                publication.revision = upmPack.flatMap {it.archiveVersion }.get()
+            project.afterEvaluate { ->
+                publication.module = upmPack.flatMap { it.packageName }.getOrNull()
+                publication.revision = upmPack.flatMap {it.archiveVersion }.getOrNull()
             }
             publication.artifact(upmArtifact)
             return publication
@@ -89,20 +91,18 @@ class UPMPlugin implements Plugin<Project> {
         return upmPublication
     }
 
-    private static void configureArtifactory(Project project, UPMPublishExtension upmExtension, String publicationName) {
+    private static void configureArtifactory(Project project, UPMExtension upmExtension, String publicationName) {
         project.afterEvaluate { ->
             def artifactory = project.convention.plugins.get("artifactory") as ArtifactoryPluginConvention
-            def repoName = upmExtension.repository.get()
-            def upmRepo = upmRepoFromPublishing(project)[repoName]
-            artifactory.contextUrl = upmRepo.baseUrl
+            artifactory.contextUrl = upmExtension.upmRepositoryBaseUrl.get()
             artifactory.publish { PublisherConfig publisherConfig ->
-                publisherConfig.repository { it ->
+                 publisherConfig.repository { it ->
                     it.ivy { PublisherConfig.Repository repo ->
                         repo.artifactLayout = '[module]/-/[module]-[revision].[ext]'
                         repo.mavenCompatible = false
-                        repo.repoKey = upmRepo.repositoryKey
-                        repo.username = upmExtension.username.orElse(project.provider{upmRepo?.credentials?.username}).orNull
-                        repo.password = upmExtension.password.orElse(project.provider{upmRepo?.credentials?.password}).orNull
+                        repo.repoKey = upmExtension.upmRepositoryKey.get()
+                        repo.username = upmExtension.username.orNull
+                        repo.password = upmExtension.password.orNull
                     }
                 }
             }
@@ -125,20 +125,13 @@ class UPMPlugin implements Plugin<Project> {
         }
     }
 
-    private static boolean hasValidMetafiles(UPMPublishExtension extension, Logger logger) {
+    private static boolean hasValidMetafiles(UPMExtension extension, Logger logger) {
         def upmPackDir = extension.packageDirectory.asFile.get()
-        def filesWithoutMeta = new UnityMetafileDetector().filesWithoutMetafile(upmPackDir)
+        def filesWithoutMeta = new UnityProjects().filesWithoutMetafile(upmPackDir)
         if (filesWithoutMeta.size() > 0) {
             logger.info("{} files found without corresponding metafile in {}", filesWithoutMeta.size(), upmPackDir.path)
         }
         return filesWithoutMeta.size() > 0
-    }
-
-    private static Map<String, UPMArtifactRepository> upmRepoFromPublishing(Project project) {
-        def publishExt = project.extensions.findByType(PublishingExtension)
-        publishExt.repositories.withType(UPMArtifactRepository).stream().map {
-            repo -> new Tuple2<>(repo.name, repo)
-        }.collect(Collectors.toMap({ it.first as String }, { it.second as UPMArtifactRepository }))
     }
 
 }

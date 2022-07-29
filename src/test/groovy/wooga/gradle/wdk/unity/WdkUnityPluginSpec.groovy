@@ -67,7 +67,6 @@ class WdkUnityPluginSpec extends ProjectSpec {
         WdkUnityPlugin.SETUP_TASK_NAME                      | DefaultTask
         WdkUnityPlugin.SONARQUBE_BUILD_TASK_NAME            | BuildSolution
         WdkUnityPlugin.SONARQUBE_TASK_NAME                  | DefaultTask
-        WdkUnityPlugin.GENERATE_UPM_PACKAGE_TASK_NAME       | GenerateUpmPackage
     }
 
     @Unroll

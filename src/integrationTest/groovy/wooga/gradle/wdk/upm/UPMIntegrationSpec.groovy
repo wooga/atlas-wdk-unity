@@ -5,17 +5,24 @@ import org.jfrog.artifactory.client.Artifactory
 import org.jfrog.artifactory.client.ArtifactoryClientBuilder
 import org.jfrog.artifactory.client.model.RepoPath
 import spock.lang.Shared
+import wooga.gradle.unity.utils.PackageManifestBuilder
 import wooga.gradle.wdk.UnityIntegrationSpec
 
+import java.util.stream.IntStream
+
 class UPMIntegrationSpec extends UnityIntegrationSpec {
+
+    protected static final String WOOGA_ARTIFACTORY_BASE_URL = "https://wooga.jfrog.io/wooga"
+    protected static final String WOOGA_ARTIFACTORY_CI_REPO = "atlas-upm-integrationTest"
+
+    protected final String DEFAULT_VERSION = "0.0.1"
 
     @Shared
     long specStartupTime
     @Shared
     Artifactory artifactory
-    @Shared
-    protected static final String WOOGA_ARTIFACTORY_BASE_URL = "https://wooga.jfrog.io/wooga"
-    protected static final String WOOGA_ARTIFACTORY_CI_REPO = "atlas-upm-integrationTest"
+
+
 
     Tuple2<String, String> credentialsFromEnv(String userEnv="ATLAS_ARTIFACTORY_INTEGRATION_USER",
                                               String pwdEnv="ATLAS_ARTIFACTORY_INTEGRATION_PASSWORD") {
@@ -73,5 +80,22 @@ class UPMIntegrationSpec extends UnityIntegrationSpec {
                 throw e
             }
         }
+    }
+
+    File writeTestPackage(String packageDirectory, String packageName, String packageVersion = DEFAULT_VERSION, boolean hasMetafiles = true, int fileCount = 1) {
+        def packageDir = directory(packageDirectory)
+        def packageManifestFile = file("package.json", packageDir)
+        if (hasMetafiles) {
+            file("package.json.meta", packageDir).write("META")
+        }
+        packageManifestFile.write(new PackageManifestBuilder(packageName, packageVersion).build())
+        IntStream.range(0, fileCount).forEach {
+            def baseName = "Sample$fileCount".toString()
+            file("${baseName}.cs", packageDir).write("class ${baseName} {}")
+            if (hasMetafiles) {
+                file("${baseName}.cs.meta", packageDir).write("META")
+            }
+        }
+        return packageDir
     }
 }

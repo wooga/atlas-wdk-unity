@@ -15,7 +15,7 @@
  *
  */
 
-package wooga.gradle.wdk.upm.internal.repository.internal
+package wooga.gradle.wdk.upm.internal.repository
 
 import org.gradle.api.artifacts.repositories.ArtifactRepository
 
