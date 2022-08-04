@@ -30,6 +30,8 @@ class UPMPlugin implements Plugin<Project> {
     static final String EXTENSION_NAME = "upm"
     static final String GENERATE_UPM_PACKAGE_TASK_NAME = "upmPack"
     static final String GENERATE_META_FILES_TASK_NAME = "generateMetaFiles"
+    static final String ARCHIVE_CONFIGURATION_NAME = "upm"
+
 
     private final PluginRegistry pluginRegistry
 
@@ -75,10 +77,10 @@ class UPMPlugin implements Plugin<Project> {
             new DslObject(e.repositories).convention.plugins.put(UPMPlugin.canonicalName, upmHandlerConvention)
         })
 
-        project.configurations.maybeCreate(WdkUnityPluginConventions.upmConfigurationName).with {
+        project.configurations.maybeCreate(ARCHIVE_CONFIGURATION_NAME).with {
             it.transitive = false
         }
-        def upmArtifact = project.artifacts.add(WdkUnityPluginConventions.upmConfigurationName, upmPack)
+        def upmArtifact = project.artifacts.add(ARCHIVE_CONFIGURATION_NAME, upmPack)
         def publishing = project.extensions.getByType(PublishingExtension)
         def upmPublication = publishing.publications.maybeCreate(WdkUnityPluginConventions.upmPublicationName, IvyPublication).with { publication ->
             project.afterEvaluate { ->

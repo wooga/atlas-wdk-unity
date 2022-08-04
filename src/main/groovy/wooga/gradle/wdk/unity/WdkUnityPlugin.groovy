@@ -100,7 +100,6 @@ class WdkUnityPlugin implements Plugin<Project> {
         project.pluginManager.apply(UnityPlugin.class)
         project.pluginManager.apply(DotNetSonarqubePlugin.class)
 
-
         WdkPluginExtension extension = project.extensions.create(WdkPluginExtension, EXTENSION_NAME, DefaultWdkPluginExtension, project)
 
         configureExtension(project, extension)

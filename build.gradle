@@ -59,8 +59,14 @@ dependencies {
     implementation "net.wooga.gradle:unity:[3.1.1,4["
     implementation "commons-io:commons-io:2.11.0"
     implementation 'com.wooga.gradle:gradle-commons:[1,2['
+    implementation 'org.ajoberstar.grgit:grgit-gradle:[4.1.1,5['
+    implementation 'org.ajoberstar.grgit:grgit-core:[4.1.1,5['
 
     implementation "org.jfrog.buildinfo:build-info-extractor-gradle:4.29.0"
+
+    implementation 'net.wooga.gradle:version:[2,3['
+    implementation 'net.wooga.gradle:github:[3,4['
+    implementation 'net.wooga.gradle:github-release-notes:[2,3['
 
     testImplementation 'com.wooga.gradle:gradle-commons-test:[1,2)'
     testImplementation('org.jfrog.artifactory.client:artifactory-java-client-services:[2,3)') {
