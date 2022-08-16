@@ -3,10 +3,13 @@ package wooga.gradle.wdk.upm
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.file.Directory
 import org.gradle.api.internal.artifacts.dsl.DefaultRepositoryHandler
 import org.gradle.api.internal.plugins.DslObject
 import org.gradle.api.internal.plugins.PluginRegistry
 import org.gradle.api.logging.Logger
+import org.gradle.api.plugins.BasePluginConvention
+import org.gradle.api.provider.Provider
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.ivy.IvyPublication
 import org.gradle.api.publish.ivy.plugins.IvyPublishPlugin
@@ -16,11 +19,14 @@ import org.jfrog.gradle.plugin.artifactory.ArtifactoryPlugin
 import org.jfrog.gradle.plugin.artifactory.dsl.ArtifactoryPluginConvention
 import org.jfrog.gradle.plugin.artifactory.dsl.PublisherConfig
 import org.jfrog.gradle.plugin.artifactory.task.ArtifactoryTask
+import wooga.gradle.unity.UnityPlugin
 import wooga.gradle.unity.tasks.GenerateUpmPackage
 import wooga.gradle.unity.tasks.Unity
 import wooga.gradle.wdk.unity.WdkUnityPluginConventions
 import wooga.gradle.wdk.upm.internal.UnityProjects
 import wooga.gradle.wdk.upm.internal.repository.DefaultUPMRepositoryHandlerConvention
+
+import static wooga.gradle.wdk.upm.UPMErrors.errors
 
 import javax.inject.Inject
 
@@ -42,23 +48,32 @@ class UPMPlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
+        project.plugins.apply(UnityPlugin.class)
         project.plugins.apply(ArtifactoryPlugin.class)
         project.plugins.apply(IvyPublishPlugin.class)
+        project.plugins.apply(PublishingPlugin.class)
 
         def publishingExt = project.extensions.getByType(PublishingExtension)
+        //maybe we should strive to separate the input object (extension, mutable) from a inner domain object (extension.freeze()?, immutable)
+        //this inner object would be composed of providers instead of properties and could implement things as enforcing mandatory variables and such
+        //gradle does this for us in a task level, but not at a configuration level.
+        //other alternative would be to embrace gradle and do as much as we can inside tasks, which are able to evaluate stuff
         def extension = UPMExtension.newWithPublishingConventions(project, publishingExt, EXTENSION_NAME)
+        def basePluginConvention = project.provider{ project.rootProject.convention.plugins["base"] as BasePluginConvention }
 
         //this generate unity meta files, sounds like it belongs to atlas-unity
         def upmGenerateMetaFiles = project.tasks.register(GENERATE_META_FILES_TASK_NAME, Unity) {
             it.group = GROUP
             onlyIf {
-                return hasValidMetafiles(extension, logger) || extension.generateMetaFiles.get()
+                return hasValidMetafiles(extension.packageDirectory, logger).orElse(false) || extension.generateMetaFiles.get()
             }
         }
         def upmPack = project.tasks.register(GENERATE_UPM_PACKAGE_TASK_NAME, GenerateUpmPackage) {
             it.group = GROUP
             it.packageDirectory.convention(extension.packageDirectory)
-            it.archiveVersion.convention(extension.version)
+            it.archiveVersion.set(extension.version)
+            //we need to set this explicitly for projects on subplugins.
+            it.destinationDirectory.convention(basePluginConvention.flatMap{it.distsDirectory})
             it.dependsOn(upmGenerateMetaFiles)
         }
 
@@ -66,7 +81,6 @@ class UPMPlugin implements Plugin<Project> {
         configureArtifactory(project, extension, publication.name)
         setupPublishTasksDependencies(project)
     }
-
 
 
     private static IvyPublication configureUpmPublish(Project project, TaskProvider<GenerateUpmPackage> upmPack) {
@@ -77,10 +91,10 @@ class UPMPlugin implements Plugin<Project> {
             new DslObject(e.repositories).convention.plugins.put(UPMPlugin.canonicalName, upmHandlerConvention)
         })
 
-        project.configurations.maybeCreate(ARCHIVE_CONFIGURATION_NAME).with {
+        def archiveConfig = project.configurations.register(ARCHIVE_CONFIGURATION_NAME) {
             it.transitive = false
         }
-        def upmArtifact = project.artifacts.add(ARCHIVE_CONFIGURATION_NAME, upmPack)
+        def upmArtifact = project.artifacts.add(archiveConfig.name, upmPack)
         def publishing = project.extensions.getByType(PublishingExtension)
         def upmPublication = publishing.publications.maybeCreate(WdkUnityPluginConventions.upmPublicationName, IvyPublication).with { publication ->
             project.afterEvaluate { ->
@@ -121,19 +135,22 @@ class UPMPlugin implements Plugin<Project> {
         def publishTask = project.tasks.named(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME)
         publishTask.configure {it.dependsOn(artifactoryPublishTask) }
 
-        if (project.rootProject != project) {
-            def rootPublishTask = project.rootProject.tasks.getByName(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME)
-            rootPublishTask.dependsOn(publishTask)
+        //TODO: test this on UPMPlugin exclusive environment
+        if (project.rootProject != project && project.rootProject.plugins.hasPlugin(PublishingPlugin)) {
+            project.rootProject.tasks.named(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME) {
+               it.dependsOn(publishTask)
+            }
         }
     }
 
-    private static boolean hasValidMetafiles(UPMExtension extension, Logger logger) {
-        def upmPackDir = extension.packageDirectory.asFile.get()
-        def filesWithoutMeta = new UnityProjects().filesWithoutMetafile(upmPackDir)
-        if (filesWithoutMeta.size() > 0) {
-            logger.info("{} files found without corresponding metafile in {}", filesWithoutMeta.size(), upmPackDir.path)
+    private static Provider<Boolean> hasValidMetafiles(Provider<Directory> packageDirectory, Logger logger = null) {
+        return packageDirectory.asFile.map { upmPackDir ->
+            def filesWithoutMeta = new UnityProjects().filesWithoutMetafile(upmPackDir)
+            if (filesWithoutMeta.size() > 0) {
+                logger?.info("{} files found without corresponding metafile in {}", filesWithoutMeta.size(), upmPackDir.path)
+            }
+            return filesWithoutMeta.size() > 0
         }
-        return filesWithoutMeta.size() > 0
     }
 
 }

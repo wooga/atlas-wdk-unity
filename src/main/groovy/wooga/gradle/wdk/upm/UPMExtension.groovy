@@ -4,6 +4,7 @@ import org.gradle.api.Project
 import org.gradle.api.file.Directory
 import org.gradle.api.provider.Provider
 import org.gradle.api.publish.PublishingExtension
+import wooga.gradle.wdk.publish.WDKPublishExtension
 import wooga.gradle.wdk.upm.internal.UnityProjects
 import wooga.gradle.wdk.upm.internal.repository.UPMArtifactRepository
 import wooga.gradle.wdk.upm.traits.UPMPackSpec
@@ -20,7 +21,9 @@ class UPMExtension implements UPMPublishSpec, UPMPackSpec {
         extension.with {
             def upmRepositories = project.provider({ upmRepoFromPublishing(publishingExt) })
             //better this than zip, bc zip have awful error messages, and like this we can pinpoint the eventual error better.
-            it.selectedUPMRepository = upmRepositories.map{ upmRepos -> upmRepos[extension.repository.get()] }
+            it.selectedUPMRepository = upmRepositories.map {
+                upmRepos -> upmRepos[extension.repository.get()]
+            }
 
             username.convention(UPMConventions.username.getStringValueProvider(project)
                                 .orElse(selectedUPMRepository.map {it.credentials?.username}))
@@ -32,6 +35,7 @@ class UPMExtension implements UPMPublishSpec, UPMPackSpec {
 
     static UPMExtension newWithConventions(Project project, String extensionName) {
         def extension = project.extensions.create(extensionName, UPMExtension)
+        WDKPublishExtension.setPropertiesOwner(UPMExtension, extension, extensionName)
 
         extension.with {
             repository.convention(UPMConventions.repository.getStringValueProvider(project))
@@ -67,5 +71,9 @@ class UPMExtension implements UPMPublishSpec, UPMPackSpec {
 
     Provider<String> getUpmRepositoryKey() {
         return selectedUPMRepository.map{it.repositoryKey}
+    }
+
+    def enforceProperties() {
+
     }
 }

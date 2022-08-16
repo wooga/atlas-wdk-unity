@@ -23,7 +23,7 @@ class UPMExtensionIntegrationSpec extends UPMIntegrationSpec {
     @Unroll("can set property #property with #invocation and type #type with build.gradle")
     def "can set property on upm extension with build.gradle"() {
         given: "existing UPM-ready folder"
-        writeTestPackage(existingUPMPackage, existingUPMPackage)
+        utils.writeTestPackage(projectDir, existingUPMPackage, existingUPMPackage)
         and:
         buildFile << """
         publishing {
@@ -40,18 +40,13 @@ class UPMExtensionIntegrationSpec extends UPMIntegrationSpec {
         }
 
         when:
-//        set.location = invocation == PropertySetInvocation.none ? PropertyLocation.none : set.location
+        set.location = invocation == PropertySetInvocation.none ? PropertyLocation.none : set.location
         def propertyQuery = runPropertyQuery(get, set)
-                                            .withDirectoryPathsRelativeToProject()
-                                            .withDirectoryProviderPathsRelativeToProject()
-
-
-                withSerializer(Directory, {
-            String dir -> new File(projectDir, dir).absolutePath
-        }).withSerializer("Provider<Directory>", {
-            String dir -> new File(projectDir, dir).absolutePath
-        })
-
+                                            .withSerializer(Directory, {
+                                                String dir -> new File(projectDir, dir).absolutePath
+                                            }).withSerializer("Provider<Directory>", {
+                                                String dir -> new File(projectDir, dir).absolutePath
+                                            })
         then:
         propertyQuery.matches(rawValue)
 
@@ -96,28 +91,13 @@ class UPMExtensionIntegrationSpec extends UPMIntegrationSpec {
         set = new PropertySetterWriter("upm", property)
                 .set(rawValue, type)
                 .toScript(invocation)
-//                .to(invocation == PropertySetInvocation.none ? PropertyLocation.none : set.location)
         get = new PropertyGetterTaskWriter(set)
     }
 
     @Unroll("can set property #property with env var #envVar")
     def "can set property from environment"() {
-        given: "existing UPM-ready folder"
-        writeTestPackage(existingUPMPackage, existingUPMPackage)
-        and: "configured build.gradle file"
-        buildFile << """
-        publishing {
-            repositories {
-                upm {
-                    url = "https://artifactoryhost/artifactory/repository"
-                    name = ${property == "repository" ? wrapValueBasedOnType(rawValue, String) : wrapValueBasedOnType("any", String)}
-                }
-            }
-        }
-        """
-        if (property != "repository") {
-            buildFile << "upm {repository = ${wrapValueBasedOnType("any", String)}}\n"
-        }
+        given: "minimal configured upm project"
+        buildFile << utils.minimalUPMConfiguration(projectDir, existingUPMPackage, property == "repository" ? rawValue : "any")
 
         when:
         def propertyQuery = runPropertyQuery(get, set).withSerializer(Directory) {
@@ -129,8 +109,9 @@ class UPMExtensionIntegrationSpec extends UPMIntegrationSpec {
 
         where:
         property            | envVar                    | type      | rawValue
-        "repository"        | "UPM_PUBLISH_REPOSITORY"  | String    | "repoName"
-        "version"           | "UPM_PUBLISH_VERSION"     | String    | "0.0.1"
+        "repository"        | "UPM_REPOSITORY"          | String    | "repoName"
+        "version"           | "UPM_VERSION"             | String    | "0.0.1"
+        "version"           | "UPM_PACKAGE_VERSION"     | String    | "0.0.1"
         "username"          | "UPM_USR"                 | String    | "username"
         "username"          | "UPM_USERNAME"            | String    | "username"
         "password"          | "UPM_PWD"                 | String    | "passw0rd"
@@ -151,22 +132,9 @@ class UPMExtensionIntegrationSpec extends UPMIntegrationSpec {
 
     @Unroll("can set property #property with gradle property #gradlePropName")
     def "can set property with gradle property"() {
-        given: "existing UPM-ready folder"
-        writeTestPackage(existingUPMPackage, existingUPMPackage)
-        and: "configured build.gradle file"
-        buildFile << """
-        publishing {
-            repositories {
-                upm {
-                    url = "https://artifactoryhost/artifactory/repository"
-                    name = ${property == "repository" ? wrapValueBasedOnType(rawValue, String) : wrapValueBasedOnType("any", String)}
-                }
-            }
-        }
-        """
-        if (property != "repository") {
-            buildFile << "upm {repository = ${wrapValueBasedOnType("any", String)}}\n"
-        }
+        given: "minimal configured upm project"
+        buildFile << utils.minimalUPMConfiguration(projectDir, existingUPMPackage, property == "repository" ? rawValue : "any")
+
         when:
         def propertyQuery = runPropertyQuery(get, set).withSerializer(Directory) {
             String dir -> new File(projectDir, dir).absolutePath
@@ -177,13 +145,14 @@ class UPMExtensionIntegrationSpec extends UPMIntegrationSpec {
 
         where:
         property            | gradlePropName           | type      | rawValue
-        "repository"        | "upm.publish.repository" | String    | "repoName"
+        "repository"        | "upm.repository"         | String    | "repoName"
         "repository"        | "publish.repository"     | String    | "repoName"
-        "version"           | "upm.publish.version"    | String    | "0.0.1"
+        "version"           | "upm.version"            | String    | "0.0.1"
+        "version"           | "upm.package.version"    | String    | "0.0.1"
         "version"           | "publish.version"        | String    | "0.0.1"
-        "username"          | "upm.publish.username"   | String    | "username"
+        "username"          | "upm.username"           | String    | "username"
         "username"          | "publish.username"       | String    | "username"
-        "password"          | "upm.publish.password"   | String    | "passw0rd"
+        "password"          | "upm.password"           | String    | "passw0rd"
         "password"          | "publish.password"       | String    | "passw0rd"
         "packageDirectory"  | "upm.package.directory"  | Directory | "wdk-name"
         "generateMetaFiles" | "upm.generate.metafiles" | Boolean   | "true"
@@ -198,7 +167,7 @@ class UPMExtensionIntegrationSpec extends UPMIntegrationSpec {
     @Unroll
     def "sets credentials configured in the publishing extension to the UPM extension"() {
         given: "existing UPM-ready folder"
-        writeTestPackage(existingUPMPackage, existingUPMPackage)
+        utils.writeTestPackage(projectDir, existingUPMPackage, existingUPMPackage)
         and: "configured build.gradle file"
         buildFile << """
         publishing {

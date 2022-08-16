@@ -5,25 +5,25 @@ import com.wooga.gradle.PropertyLookup
 class UPMConventions {
 
     static final PropertyLookup repository = new FixPropertyLookup(
-            ["UPM_PUBLISH_REPOSITORY"],
-            ["upm.publish.repository", "publish.repository"],
+            ["UPM_REPOSITORY"],
+            ["upm.repository", "publish.repository"],
             null)
 
     static final PropertyLookup version = new FixPropertyLookup(
-            ["UPM_PUBLISH_VERSION"],
-            ["upm.publish.version", "publish.version"],
+            ["UPM_PACKAGE_VERSION", "UPM_VERSION"],
+            ["upm.version", "upm.package.version", "publish.version"],
             null)
 
 
     static final PropertyLookup username = new FixPropertyLookup(
             ["UPM_USR", "UPM_USERNAME"],
-            ["upm.publish.username", "publish.username"],
+            ["upm.username", "publish.username"],
             null
     )
 
     static final PropertyLookup password = new FixPropertyLookup(
             ["UPM_PWD", "UPM_PASSWORD"],
-            ["upm.publish.password", "publish.password"],
+            ["upm.password", "publish.password"],
             null
     )
 

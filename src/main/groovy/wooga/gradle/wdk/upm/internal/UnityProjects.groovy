@@ -43,7 +43,7 @@ class UnityProjects {
                 break
             default:
                 logger?.warn("More then one package manifest file (package.json) was found")
-                return baseDir.dir(upmBasePath.toAbsolutePath().toString())
+                return upmBasePath.toAbsolutePath()
         }
         return null
     }

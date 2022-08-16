@@ -1,6 +1,8 @@
 package wooga.gradle.wdk.upm
 
 import org.gradle.api.file.Directory
+import org.gradle.api.plugins.BasePluginConvention
+import org.gradle.api.publish.plugins.PublishingPlugin
 import org.jfrog.artifactory.client.model.RepoPath
 import spock.lang.Unroll
 
@@ -8,21 +10,16 @@ import static com.wooga.gradle.test.PropertyUtils.wrapValueBasedOnType
 
 class UPMPluginIntegrationSpec extends UPMIntegrationSpec {
 
-    def setup() {
-        buildFile << """
-            ${applyPlugin(UPMPlugin)}
-        """.stripIndent()
-    }
-
     @Unroll("#shouldGenerateMsg metafiles from extension property being #generateMetafiles on a project #hasMetafilesMsg metafiles")
     def "{shouldGenerateMsg} metafiles from extension property being {generateMetafiles} on a project {hasMetafilesMsg} metafiles"() {
         given: "target repository and artifact"
         def repoName = WOOGA_ARTIFACTORY_CI_REPO
         def packageName = "upm-package-name"
         and:
-        def upmPackageFolder = writeTestPackage("Assets/$packageName", packageName, "any", projectWithMetafiles)
+        def upmPackageFolder = utils.writeTestPackage(projectDir,"Assets/$packageName", packageName, "any", projectWithMetafiles)
         and:
         buildFile << """
+        ${applyPlugin(UPMPlugin)}
         publishing {
             repositories {
                 upm {
@@ -54,14 +51,59 @@ class UPMPluginIntegrationSpec extends UPMIntegrationSpec {
         hasMetafilesMsg = projectWithMetafiles ? "with" : "without"
     }
 
+    def "publishes folder as UPM package on subproject"() {
+        given: "a gradle subproject"
+        def subprojDir = new File(projectDir, "subproject")
+        def subBuildFile = initializeSubproj(settingsFile, subprojDir)
+        and: "root project with publishing plugin"
+        buildFile << applyPlugin(PublishingPlugin)
+
+        and: "existing UPM-ready folder in subproject"
+        utils.writeTestPackage(subprojDir, upmPackageFolder, packageName, packageVersion)
+        and: "artifactory credentials"
+        def (username, password) = utils.credentialsFromEnv()
+        and: "configured package dir and repository"
+        subBuildFile << """
+        ${applyPlugin(UPMPlugin)}
+        publishing {
+            repositories {
+                upm {
+                    url = ${wrapValueBasedOnType(artifactoryURL(WOOGA_ARTIFACTORY_CI_REPO), String)}
+                    name = ${wrapValueBasedOnType(repositoryName, String)}
+                }
+            }
+        }
+        upm {
+            packageDirectory = ${wrapValueBasedOnType(upmPackageFolder, Directory)}
+            version = ${wrapValueBasedOnType(packageVersion, String)}
+            repository = ${wrapValueBasedOnType(repositoryName, String)}
+            username = ${wrapValueBasedOnType(username, String)}
+            password = ${wrapValueBasedOnType(password, String)}
+        }
+        """
+
+        when:
+        def r = runTasks( "publish")
+
+        then:
+        r.success
+        utils.hasPackageOnArtifactory(WOOGA_ARTIFACTORY_CI_REPO, packageName, packageVersion)
+
+        where:
+        upmPackageFolder     | repositoryName
+        "Assets/upm-package" | "integration"
+        packageVersion = "0.0.1"
+        packageName = "upm-package-name"
+    }
+
     def "publishes folder as UPM package"() {
         given: "existing UPM-ready folder"
-
-        writeTestPackage(upmPackageFolder, packageName, packageVersion)
+        utils.writeTestPackage(projectDir, upmPackageFolder, packageName, packageVersion)
         and: "artifactory credentials"
-        def (username, password) = credentialsFromEnv()
+        def (username, password) = utils.credentialsFromEnv()
         and: "configured package dir and repository"
         buildFile << """
+        ${applyPlugin(UPMPlugin)}
         publishing {
             repositories {
                 upm {
@@ -83,7 +125,7 @@ class UPMPluginIntegrationSpec extends UPMIntegrationSpec {
         def r = runTasksSuccessfully( "publish")
 
         then:
-        hasPackageOnArtifactory(WOOGA_ARTIFACTORY_CI_REPO, packageName, packageVersion)
+        utils.hasPackageOnArtifactory(WOOGA_ARTIFACTORY_CI_REPO, packageName, packageVersion)
 
         where:
         upmPackageFolder     | repositoryName
@@ -92,16 +134,15 @@ class UPMPluginIntegrationSpec extends UPMIntegrationSpec {
         packageName = "upm-package-name"
     }
 
-
-    //TODO: this can be an extension centered unit test now.
     @Unroll("publishes folder as UPM package to protected repository withn credentials set in #location")
     def "publishes folder as UPM package to protected repository withn credentials set in {location}"() {
         given: "existing UPM-ready folder"
-        writeTestPackage(packageDirectory, packageName)
+        utils.writeTestPackage(projectDir, packageDirectory, packageName)
         and: "artifactory credentials"
-        def (username, password) = credentialsFromEnv()
+        def (username, password) = utils.credentialsFromEnv()
         and: "configured package dir and repository"
         buildFile << """
+        ${applyPlugin(UPMPlugin)}
         publishing {
             repositories {
                 upm {
@@ -131,24 +172,11 @@ class UPMPluginIntegrationSpec extends UPMIntegrationSpec {
 
         then:
         r.success
-        hasPackageOnArtifactory(WOOGA_ARTIFACTORY_CI_REPO, packageName)
+        utils.hasPackageOnArtifactory(packageName)
 
         where:
         location << ["extension", "repository"]
         packageDirectory = "Assets/upm"
         packageName = "packageName"
-    }
-
-
-
-    boolean hasPackageOnArtifactory(String repoName, String artifactName, String artifactVersion = DEFAULT_VERSION) {
-        List<RepoPath> packages = artifactory.searches()
-                .repositories(repoName)
-                .artifactsByName(artifactName)
-                .version(artifactVersion)
-                .doSearch()
-        packages = packages.findAll {it.itemPath.endsWith(".json")}
-        assert packages.size() == 1: "Could not find artifact `${artifactName}` on repository ${repoName}"
-        return true
     }
 }

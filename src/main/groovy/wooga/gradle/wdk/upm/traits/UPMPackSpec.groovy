@@ -64,5 +64,4 @@ trait UPMPackSpec extends BaseSpec {
         generateMetaFiles.set(value)
     }
 
-
 }

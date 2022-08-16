@@ -1,6 +1,7 @@
 package wooga.gradle.wdk.upm
 
 import nebula.test.ProjectSpec
+import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.publish.ivy.plugins.IvyPublishPlugin
 import org.jfrog.gradle.plugin.artifactory.ArtifactoryPlugin
 import spock.lang.Unroll
@@ -55,5 +56,25 @@ class UPMPluginSpec extends ProjectSpec {
         taskName                                 | taskType
         UPMPlugin.GENERATE_UPM_PACKAGE_TASK_NAME | GenerateUpmPackage
         UPMPlugin.GENERATE_META_FILES_TASK_NAME  | Unity
+    }
+
+    def "Archive configuration 'upm' stores UPM artifact"() {
+        given:
+        assert !project.plugins.hasPlugin(UPMPlugin)
+        assert !project.configurations.findByName(configName)
+
+        when:
+        project.plugins.apply(BasePlugin) //should UPMPlugin just apply base?
+        project.plugins.apply(UPMPlugin)
+
+        then:
+        def config = project.configurations.findByName(configName)
+        def upmArtifact = config.allArtifacts.files.first()
+        upmArtifact != null
+        upmArtifact.name.endsWith(".tgz")
+
+
+        where:
+        configName = UPMPlugin.ARCHIVE_CONFIGURATION_NAME
     }
 }

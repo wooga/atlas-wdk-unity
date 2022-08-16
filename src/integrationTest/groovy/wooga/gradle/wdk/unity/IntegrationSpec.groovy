@@ -26,4 +26,14 @@ class IntegrationSpec extends com.wooga.gradle.test.IntegrationSpec {
             fork = true
         }
     }
+
+    def initializeSubproj(File settingsFile, File subprojectDir) {
+        subprojectDir.mkdirs()
+        def buildFile = new File(subprojectDir, "build.gradle")
+        buildFile.createNewFile()
+        settingsFile << """
+        include ':${subprojectDir.toPath().fileName.toString()}'
+        """
+        return buildFile
+    }
 }
