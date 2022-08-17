@@ -21,16 +21,16 @@ class WDKPublishIntegrationSpec extends UnityIntegrationSpec {
         this.specCreationTs = System.currentTimeMillis()
     }
 
-    def <T> T waitForNotNull(long poolInterval = 10000, long timeoutMs = 120000, Closure<T> operation) {
+    boolean waitForTimeout(long poolInterval = 10000, long timeoutMs = 60000, Closure operation) {
         def startTs = System.currentTimeMillis()
         def result = operation()
         while(result == null) {
             Thread.sleep(poolInterval)
             result = operation()
             if(System.currentTimeMillis() > startTs + timeoutMs) {
-                throw new TimeoutException("timeout waiting while waiting for operation completion")
+                return false
             }
         }
-        return result
+        return true
     }
 }

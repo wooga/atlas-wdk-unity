@@ -11,6 +11,7 @@ import wooga.gradle.version.VersionPluginExtension
 import wooga.gradle.version.VersionScheme
 import wooga.gradle.wdk.internal.GrGitExtended
 import wooga.gradle.wdk.publish.internal.BaseGradleSpec
+import wooga.gradle.wdk.publish.internal.GradleTestUtils
 import wooga.gradle.wdk.publish.internal.releasenotes.ReleaseNotesBodyStrategy
 import wooga.gradle.wdk.upm.UPMExtension
 import wooga.gradle.wdk.upm.UPMPlugin
@@ -30,8 +31,8 @@ class WDKPublishPluginSpec extends BaseGradleSpec {
         versionExt.versionCodeScheme.get() == VersionCodeScheme.semver
     }
 
-    @Unroll("configures upm extension version as #semver2Version when version plugin version scheme is #versionScheme")
-    def "configures upm extension version as always semver2"() {
+    @Unroll("configures upm extension version as #expectedVersion when version plugin version scheme is #versionScheme")
+    def "configures upm extension version as the same as version plugin when wdk publish plugin is in root project"() {
         given:
         project.ext["release.scope"] = releaseScope
         project.ext["release.stage"] = releaseStage
@@ -48,17 +49,49 @@ class WDKPublishPluginSpec extends BaseGradleSpec {
 
         then:
         def upmExt = utils.requireExtension(UPMExtension)
+        upmExt.version.get() == expectedVersion
+
+        where:
+        versionScheme         | expectedVersion     | releaseStage
+        VersionScheme.semver  | "1.0.0-master00001" | "snapshot"
+        VersionScheme.semver2 | "1.0.0-master.1"    | "snapshot"
+        VersionScheme.semver  | "1.0.0-rc00001"     | "rc"
+        VersionScheme.semver2 | "1.0.0-rc.1"        | "rc"
+        VersionScheme.semver  | "1.0.0"             | "final"
+        VersionScheme.semver2 | "1.0.0"             | "final"
+        releaseScope = "major"
+    }
+
+    @Unroll("configures upm extension version as #semver2Version when version plugin version scheme is #versionScheme")
+    def "configures upm extension version always as semver2 when not in root project"() {
+        given:
+        def subproject = utils.createSubproject("subproject")
+        def subProjUtils = new GradleTestUtils(subproject)
+        project.ext["release.scope"] = releaseScope
+        project.ext["release.stage"] = releaseStage
+
+        and: "git repository needed for test to track its own versions through tags"
+        GrGitExtended.initWithIgnoredFiles(projectDir, "*")
+
+        when:
+        subproject.plugins.apply(WDKPublishPlugin)
+        and: "version plugin version forced to..."
+        utils.requireExtension(VersionPluginExtension).with {
+            it.versionScheme = versionScheme
+        }
+
+        then:
+        def upmExt = subProjUtils.requireExtension(UPMExtension)
         upmExt.version.get() == semver2Version
 
         where:
-        versionScheme              | semver2Version   | releaseStage
-        VersionScheme.semver       | "1.0.0-master.1" | "snapshot"
-        VersionScheme.staticMarker | "1.0.0-master.1" | "snapshot"
-        VersionScheme.semver2      | "1.0.0-master.1" | "snapshot"
-        VersionScheme.semver       | "1.0.0-rc.1"     | "rc"
-        VersionScheme.semver2      | "1.0.0-rc.1"     | "rc"
-        VersionScheme.semver       | "1.0.0"          | "final"
-        VersionScheme.semver2      | "1.0.0"          | "final"
+        versionScheme         | semver2Version   | releaseStage
+        VersionScheme.semver  | "1.0.0-master.1" | "snapshot"
+        VersionScheme.semver2 | "1.0.0-master.1" | "snapshot"
+        VersionScheme.semver  | "1.0.0-rc.1"     | "rc"
+        VersionScheme.semver2 | "1.0.0-rc.1"     | "rc"
+        VersionScheme.semver  | "1.0.0"          | "final"
+        VersionScheme.semver2 | "1.0.0"          | "final"
         releaseScope = "major"
     }
 

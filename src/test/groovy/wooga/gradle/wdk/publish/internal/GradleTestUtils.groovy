@@ -2,6 +2,7 @@ package wooga.gradle.wdk.publish.internal
 
 import org.gradle.api.Project
 import org.gradle.api.internal.project.DefaultProject
+import org.gradle.testfixtures.ProjectBuilder
 
 class GradleTestUtils {
 
@@ -22,4 +23,14 @@ class GradleTestUtils {
     public void evaluate(Project project) {
         ((DefaultProject)project).evaluate()
     }
+
+    Project createSubproject(String name = "subproject") {
+        def projDir = new File(project.projectDir, name)
+        projDir.mkdirs()
+        return ProjectBuilder.builder()
+                            .withName(name)
+                            .withProjectDir(new File(project.projectDir, name))
+                            .withParent(project).build()
+    }
+
 }

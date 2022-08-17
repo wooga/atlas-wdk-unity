@@ -18,10 +18,11 @@ class Versions {
                                         SemverV2Strategies.SNAPSHOT,
                                         SemverV2Strategies.PRE_RELEASE,
                                         SemverV2Strategies.FINAL]
-            return availableStrategies.stream()
+            def nonDefaultStrat = availableStrategies.stream()
                     .filter {it.selector(project, git)}
                     .findFirst()
-                    .or{ defaultStrategy }
+            def strategy = nonDefaultStrat.orElse(defaultStrategy.orElse(null))
+            return Optional.ofNullable(strategy)
                     .map{ semver2Strategy ->
                         semver2Strategy.infer(project, git)
                     }

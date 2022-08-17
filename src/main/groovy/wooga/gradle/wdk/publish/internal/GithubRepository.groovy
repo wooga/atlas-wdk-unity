@@ -19,9 +19,10 @@ class GithubRepository {
 
     static GithubRepository fromExtension(GithubPluginExtension ghExtension, Logger logger = null) {
         def repo = ghExtension.repositoryName.flatMap { repoName ->
-            ghExtension.clientProvider.map { ghClient -> ghClient.getRepository(repoName) }
+            ghExtension.clientProvider.map {
+                ghClient -> tryGetRepository(ghClient, repoName, logger).orElse(null)
+            }
         }
-
         return new GithubRepository(repo)
     }
 

@@ -6,11 +6,12 @@ import com.wooga.gradle.test.writers.PropertySetInvocation
 import com.wooga.gradle.test.writers.PropertySetterWriter
 import org.gradle.api.file.Directory
 import spock.lang.Unroll
+import wooga.gradle.wdk.upm.internal.UPMSnippetsTrait
 
 import static com.wooga.gradle.test.PropertyUtils.wrapValueBasedOnType
 import static com.wooga.gradle.test.writers.PropertySetInvocation.*
 
-class UPMExtensionIntegrationSpec extends UPMIntegrationSpec {
+class UPMExtensionIntegrationSpec extends UPMIntegrationSpec implements UPMSnippetsTrait {
 
     static final String existingUPMPackage = "upmPackage"
 
@@ -45,7 +46,7 @@ class UPMExtensionIntegrationSpec extends UPMIntegrationSpec {
                                             .withSerializer(Directory, {
                                                 String dir -> new File(projectDir, dir).absolutePath
                                             }).withSerializer("Provider<Directory>", {
-                                                String dir -> new File(projectDir, dir).absolutePath
+                                                String dir -> new File(new File(projectDir, "build"), dir).absolutePath
                                             })
         then:
         propertyQuery.matches(rawValue)
@@ -78,7 +79,7 @@ class UPMExtensionIntegrationSpec extends UPMIntegrationSpec {
 
         "packageDirectory"  | providerSet | "upmpkg"           | "Provider<Directory>"
         "packageDirectory"  | assignment  | "upmpkg"           | "Provider<Directory>"
-        "packageDirectory"  | setter      | "upmpkg"           | "Directory" //not working
+        "packageDirectory"  | setter      | "upmpkg"           | "Directory"
         "packageDirectory"  | assignment  | "upmpkg"           | "Directory"
         "packageDirectory"  | none        | existingUPMPackage | "Directory"
 
@@ -97,7 +98,7 @@ class UPMExtensionIntegrationSpec extends UPMIntegrationSpec {
     @Unroll("can set property #property with env var #envVar")
     def "can set property from environment"() {
         given: "minimal configured upm project"
-        buildFile << utils.minimalUPMConfiguration(projectDir, existingUPMPackage, property == "repository" ? rawValue : "any")
+        buildFile << minimalUPMConfiguration(projectDir, existingUPMPackage, property == "repository" ? rawValue : "any")
 
         when:
         def propertyQuery = runPropertyQuery(get, set).withSerializer(Directory) {
@@ -133,7 +134,7 @@ class UPMExtensionIntegrationSpec extends UPMIntegrationSpec {
     @Unroll("can set property #property with gradle property #gradlePropName")
     def "can set property with gradle property"() {
         given: "minimal configured upm project"
-        buildFile << utils.minimalUPMConfiguration(projectDir, existingUPMPackage, property == "repository" ? rawValue : "any")
+        buildFile << minimalUPMConfiguration(projectDir, existingUPMPackage, property == "repository" ? rawValue : "any")
 
         when:
         def propertyQuery = runPropertyQuery(get, set).withSerializer(Directory) {

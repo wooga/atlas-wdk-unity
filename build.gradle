@@ -26,6 +26,9 @@ repositories  {
     mavenCentral()
 }
 
+java.sourceCompatibility = JavaVersion.VERSION_1_8
+java.targetCompatibility = JavaVersion.VERSION_1_8
+
 group 'net.wooga.gradle'
 description = 'Plugin for wooga unity package development.'
 
@@ -41,6 +44,18 @@ gradlePlugin {
             displayName = 'Wooga internal plugin to help setup depencencies for unity packages'
             description = 'This plugin provides tasks to define and copy development dependencies into the Unity3D project'
             implementationClass = 'wooga.gradle.wdk.unity.WdkUnityPlugin'
+        }
+        upm {
+            id = 'net.wooga.upm'
+            displayName = 'Wooga plugin for setting UPM deploys'
+            description = 'This plugin provides tasks to publish a UPM package into a UPM repository'
+            implementationClass = 'wooga.gradle.wdk.upm.UPMPlugin'
+        }
+        wdkPublish {
+            id = 'net.wooga.wdk-publish'
+            displayName = 'Wooga internal plugin to help publish WDKs'
+            description = 'This plugin provides github and artifactory publishing tasks configurated with a WDK-centric bias'
+            implementationClass = 'wooga.gradle.wdk.publish.WDKPublishPlugin'
         }
     }
 }

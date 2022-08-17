@@ -26,8 +26,6 @@ import wooga.gradle.wdk.unity.WdkUnityPluginConventions
 import wooga.gradle.wdk.upm.internal.UnityProjects
 import wooga.gradle.wdk.upm.internal.repository.DefaultUPMRepositoryHandlerConvention
 
-import static wooga.gradle.wdk.upm.UPMErrors.errors
-
 import javax.inject.Inject
 
 class UPMPlugin implements Plugin<Project> {
@@ -54,10 +52,6 @@ class UPMPlugin implements Plugin<Project> {
         project.plugins.apply(PublishingPlugin.class)
 
         def publishingExt = project.extensions.getByType(PublishingExtension)
-        //maybe we should strive to separate the input object (extension, mutable) from a inner domain object (extension.freeze()?, immutable)
-        //this inner object would be composed of providers instead of properties and could implement things as enforcing mandatory variables and such
-        //gradle does this for us in a task level, but not at a configuration level.
-        //other alternative would be to embrace gradle and do as much as we can inside tasks, which are able to evaluate stuff
         def extension = UPMExtension.newWithPublishingConventions(project, publishingExt, EXTENSION_NAME)
         def basePluginConvention = project.provider{ project.rootProject.convention.plugins["base"] as BasePluginConvention }
 
@@ -65,7 +59,7 @@ class UPMPlugin implements Plugin<Project> {
         def upmGenerateMetaFiles = project.tasks.register(GENERATE_META_FILES_TASK_NAME, Unity) {
             it.group = GROUP
             onlyIf {
-                return hasValidMetafiles(extension.packageDirectory, logger).orElse(false) || extension.generateMetaFiles.get()
+                return hasValidMetafiles(extension.packageDirectory, logger).getOrElse(false) || extension.generateMetaFiles.get()
             }
         }
         def upmPack = project.tasks.register(GENERATE_UPM_PACKAGE_TASK_NAME, GenerateUpmPackage) {
@@ -144,7 +138,7 @@ class UPMPlugin implements Plugin<Project> {
     }
 
     private static Provider<Boolean> hasValidMetafiles(Provider<Directory> packageDirectory, Logger logger = null) {
-        return packageDirectory.asFile.map { upmPackDir ->
+        return packageDirectory.asFile.map { File upmPackDir ->
             def filesWithoutMeta = new UnityProjects().filesWithoutMetafile(upmPackDir)
             if (filesWithoutMeta.size() > 0) {
                 logger?.info("{} files found without corresponding metafile in {}", filesWithoutMeta.size(), upmPackDir.path)

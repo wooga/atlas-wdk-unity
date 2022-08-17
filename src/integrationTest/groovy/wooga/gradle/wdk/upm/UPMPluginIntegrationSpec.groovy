@@ -134,8 +134,8 @@ class UPMPluginIntegrationSpec extends UPMIntegrationSpec {
         packageName = "upm-package-name"
     }
 
-    @Unroll("publishes folder as UPM package to protected repository withn credentials set in #location")
-    def "publishes folder as UPM package to protected repository withn credentials set in {location}"() {
+    @Unroll("publishes folder as UPM package to protected repository with credentials set in #location")
+    def "publishes folder as UPM package to protected repository with credentials set in {location}"() {
         given: "existing UPM-ready folder"
         utils.writeTestPackage(projectDir, packageDirectory, packageName)
         and: "artifactory credentials"
@@ -172,7 +172,7 @@ class UPMPluginIntegrationSpec extends UPMIntegrationSpec {
 
         then:
         r.success
-        utils.hasPackageOnArtifactory(packageName)
+        utils.hasPackageOnArtifactory(WOOGA_ARTIFACTORY_CI_REPO, packageName)
 
         where:
         location << ["extension", "repository"]

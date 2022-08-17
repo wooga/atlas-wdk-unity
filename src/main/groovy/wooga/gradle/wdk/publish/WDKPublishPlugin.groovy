@@ -80,22 +80,21 @@ class WDKPublishPlugin implements Plugin<Project> {
         def versionExt = configureVersion()
 
         def archiveCfg = createArchiveConfiguration(ARCHIVE_CONFIGURATION_NAME)
-        def ghReleaseNotes = configureReleaseNotes(versionExt.version, extension.releaseNotesFile)
+        def ghReleaseNotes = configureReleaseNotes(versionExt.version, versionExt.releaseStage, extension.releaseNotesFile)
         def ghPublish = configureGithubPublish(versionExt, ghReleaseNotes, archiveCfg)
 
-        def upmVersion = project == project.rootProject? versionExt.version : Versions.semver2Version(project.rootProject, git)
+        def upmVersion = project == project.rootProject ? versionExt.version : Versions.semver2Version(project.rootProject, git)
         configureUPM(upmVersion)
         configurePublish(ghPublish)
     }
 
     UPMExtension configureUPM(Provider<ReleaseVersion> version) {
         def upmExt = project.extensions.findByType(UPMExtension).with {
-            it.version = version.map({it.version})
+            it.version = version.map({ it.version })
             return it
         }
         return upmExt
     }
-
 
 
     void configurePublish(Provider<GithubPublish> ghPublish) {
@@ -122,54 +121,79 @@ class WDKPublishPlugin implements Plugin<Project> {
     VersionPluginExtension configureVersion() {
         //version plugin can only be applied in the root project.
         def versionExt = project.rootProject.extensions.findByType(VersionPluginExtension)
-        if(project.rootProject == project) {
+        if (project.rootProject == project) {
             versionExt.versionScheme.set(VersionScheme.semver2)
             versionExt.versionCodeScheme.set(VersionCodeScheme.semver)
         }
         return versionExt
     }
 
-    TaskProvider<GenerateReleaseNotes> configureReleaseNotes(Provider<ReleaseVersion> version, Provider<RegularFile> releaseNotesFile) {
-        def currentVersion = version.map{it.version}
-        def previousVersion = version.map{it.previousVersion}
+    TaskProvider<GenerateReleaseNotes> configureReleaseNotes(Provider<ReleaseVersion> version,
+                                                             Provider<ReleaseStage> releaseStage,
+                                                             Provider<RegularFile> releaseNotesFile) {
+        def currentVersion = version.map { it.version }
+        def previousVersion = version.map { it.previousVersion }
+        def branchName = git.currentBranchName(project)
 
         def releaseNotesTask = project.tasks.register(GITHUB_RELEASE_NOTES_TASK_NAME, GenerateReleaseNotes) { t ->
             t.from.set(asGHTagName(previousVersion)) //do I need the .orNull here?
-            t.branch.set(git.currentBranchName(project))
+            t.branch.set(branchName)
             t.strategy.set(new ReleaseNotesBodyStrategy())
             t.output.set(releaseNotesFile)
             t.releaseName.set(currentVersion)
+            onlyIf { shouldGithubPublish(releaseStage, version, branchName) }
         }
         return releaseNotesTask
     }
 
-    TaskProvider<GithubPublish> configureGithubPublish(VersionPluginExtension versionExt, TaskProvider<GenerateReleaseNotes> releaseNotesTask, Provider<Configuration> archiveCfg) {
-        def previousVersion = versionExt.version.map { it.previousVersion }
+    TaskProvider<GithubPublish> configureGithubPublish(VersionPluginExtension versionExt,
+                                                       TaskProvider<GenerateReleaseNotes> releaseNotesTask,
+                                                       Provider<Configuration> archiveCfg) {
         def currentVersion = versionExt.version.map { it.version }
+        def branchName = git.currentBranchName(project)
 
-        def releaseNotesText = releaseNotesTask.flatMap { it.output }.map { it.asFile.text }
+        def releaseNotesText = releaseNotesTask
+                .flatMap { it.output }
+                .map { it.asFile.text }
         def ghPublishTask = project.tasks.named(GithubPublishPlugin.PUBLISH_TASK_NAME, GithubPublish) {
             it.dependsOn(releaseNotesTask)
-            it.from(archiveCfg.map {it.allArtifacts.files })
+            it.from(archiveCfg.map { it.allArtifacts.files })
             it.tagName.set(asGHTagName(currentVersion))
             it.releaseName.set(currentVersion)
-            it.targetCommitish.set(git.currentBranchName(project))
+            it.targetCommitish.set(branchName)
             it.prerelease.set(versionExt.isFinal.orElse(false))
             it.body.set(releaseNotesText)
 
-            it.onlyIf {
-                def isRelease = versionExt.releaseStage.map { it in [ReleaseStage.Prerelease, ReleaseStage.Final] }
-                return isRelease.getOrElse(false)
-            }
-
-            it.onlyIf { GithubPublish task ->
-                def noCurrentRelease = ghRepo.currentReleaseExists(asGHTagName(currentVersion)).map { !it as boolean }
-                def hasChanges = git.areDifferentCommits(asGHTagName(previousVersion), branchName)
-                // if everything somehow fails, still runs the release.
-                return noCurrentRelease.orElse(hasChanges).getOrElse(true)
-            }
+            it.onlyIf { shouldGithubPublish(versionExt.releaseStage, versionExt.version, branchName) }
         }
         return ghPublishTask
+    }
+
+    boolean shouldGithubPublish(Provider<ReleaseStage> releaseStage,
+                                Provider<ReleaseVersion> version,
+                                Provider<String> branchName) {
+        def currentVersion = version.map { it.version }
+        def previousVersion = version.map { it.previousVersion }
+
+        def isRelease = releaseStage
+                .map { it in [ReleaseStage.Prerelease, ReleaseStage.Final] }
+                .map(warnFalse("Current releaseStage is not in [rc, final], skipping"))
+
+        def noCurrentRelease = ghRepo.releaseNotExists(asGHTagName(currentVersion))
+        def hasChanges = git.areDifferentCommits(asGHTagName(previousVersion), branchName)
+        def currentReleaseNotExists = noCurrentRelease.orElse(hasChanges)
+                .map(warnFalse("there is already a github release for ${currentVersion.get()}, skipping"))
+
+        return  isRelease.getOrElse(false) &&
+                currentReleaseNotExists.getOrElse(true)
+    }
+
+
+    private Closure<Boolean> warnFalse(String message) {
+        return { Boolean value ->
+            if (!value) project.logger.warn(message)
+            return value
+        }
     }
 
     private static Provider<String> asGHTagName(Provider<String> base) {
@@ -179,7 +203,4 @@ class WDKPublishPlugin implements Plugin<Project> {
     private static String asGHTagName(String base) {
         return "v$base".toString()
     }
-
-
-
 }

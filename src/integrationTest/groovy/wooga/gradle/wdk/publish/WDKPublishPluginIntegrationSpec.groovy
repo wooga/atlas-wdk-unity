@@ -6,14 +6,15 @@ import com.wooga.spock.extensions.github.api.RateLimitHandlerWait
 import com.wooga.spock.extensions.github.api.TravisBuildNumberPostFix
 import org.gradle.api.publish.plugins.PublishingPlugin
 import org.jfrog.gradle.plugin.artifactory.task.ArtifactoryTask
+import org.junit.Assume
 import spock.lang.Shared
 import spock.lang.Unroll
 import wooga.gradle.github.publish.GithubPublishPlugin
 import wooga.gradle.release.ReleasePlugin
+import wooga.gradle.wdk.internal.GrGitExtended
 import wooga.gradle.wdk.upm.UPMPlugin
 import wooga.gradle.wdk.upm.internal.BasicSnippetsTrait
 import wooga.gradle.wdk.upm.internal.GithubSnippetsTrait
-import wooga.gradle.wdk.upm.internal.GrGitExtended
 import wooga.gradle.wdk.upm.internal.UPMSnippetsTrait
 import wooga.gradle.wdk.upm.internal.UPMTestTools
 import wooga.gradle.wdk.upm.internal.UnitySnippetsTrait
@@ -47,7 +48,7 @@ class WDKPublishPluginIntegrationSpec extends WDKPublishIntegrationSpec
     }
 
     //ps: github release == github publish + github release notes
-    @Unroll("#message github release if release.stage is #stage")
+    @Unroll("#runMsg github release if release.stage is #stage")
     def "only runs github release on some stages"() {
         given:
         buildFile << applyPlugin(WDKPublishPlugin) << "\n"
@@ -77,7 +78,7 @@ class WDKPublishPluginIntegrationSpec extends WDKPublishIntegrationSpec
         "final"    | true
         "snapshot" | false
         "dev"      | false
-        message = shouldRelease ? "runs" : "doesn't run"
+        runMsg = shouldRelease ? "runs" : "doesn't run"
     }
 
     @Unroll("#runMsg github release if #lastVersionTag and current HEAD on local git #changesMsg")
@@ -131,12 +132,12 @@ class WDKPublishPluginIntegrationSpec extends WDKPublishIntegrationSpec
         if (lastVersion != null) {
             testRepo.commit('release commit')
             testRepo.createRelease(lastVersion, lastVersion)
-            waitForNotNull { testRepo.getReleaseByTagName(lastVersion) }
+            Assume.assumeTrue(waitForTimeout { testRepo.getReleaseByTagName(lastVersion) })
         }
         GrGitExtended.initWithRemote(projectDir, testRepo, "Assets/")
         if (alreadyPublished) {
             testRepo.createRelease(currentVersion, currentVersion)
-            waitForNotNull { testRepo.getReleaseByTagName(lastVersion) }
+            Assume.assumeTrue(waitForTimeout { testRepo.getReleaseByTagName(lastVersion) })
         }
         and:
         buildFile << applyPlugin(WDKPublishPlugin)
@@ -208,9 +209,9 @@ class WDKPublishPluginIntegrationSpec extends WDKPublishIntegrationSpec
 
         and: "a published previous version tag"
         def git = GrGitExtended.initWithRemote(projectDir, testRepo, "subproject/")
-        git.commitChange('tag commit')
+        git.commitChange()
         git.tag.add(name: "v${previousVersion}")
-        git.commitChange('other commit')
+        git.commitChange()
         git.push(tags: true)
         git.push()
 
