@@ -102,8 +102,8 @@ class ReleaseNotesBodyStrategySpec extends ReleaseNotesStrategySpec<ReleaseNotes
 
     def normalizeMultiline(String str) {
         return str.trim().stripIndent().normalize()
-                .lines()
-                .map{it.stripIndent().trim().normalize()}
-                .collect(Collectors.joining("\n"))
+                .readLines()
+                .collect{it.stripIndent().trim().normalize()}
+                .join("\n")
     }
 }

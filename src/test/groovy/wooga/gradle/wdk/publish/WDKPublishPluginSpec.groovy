@@ -50,6 +50,7 @@ class WDKPublishPluginSpec extends BaseGradleSpec {
         then:
         def upmExt = utils.requireExtension(UPMExtension)
         upmExt.version.get() == expectedVersion
+        upmExt.repository.get() == releaseStage
 
         where:
         versionScheme         | expectedVersion     | releaseStage

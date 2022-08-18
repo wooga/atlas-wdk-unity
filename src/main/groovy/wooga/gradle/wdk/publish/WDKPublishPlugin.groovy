@@ -27,6 +27,7 @@ import wooga.gradle.wdk.publish.internal.releasenotes.ReleaseNotesBodyStrategy
 import wooga.gradle.wdk.upm.UPMExtension
 import wooga.gradle.wdk.upm.UPMPlugin
 
+
 class WDKPublishPlugin implements Plugin<Project> {
     static final String EXTENSION_NAME = "wdkPublish"
     static final String ARCHIVE_CONFIGURATION_NAME = "wdkPublishArchive"
@@ -84,14 +85,15 @@ class WDKPublishPlugin implements Plugin<Project> {
         def ghPublish = configureGithubPublish(versionExt, ghReleaseNotes, archiveCfg)
 
         def upmVersion = project == project.rootProject ? versionExt.version : Versions.semver2Version(project.rootProject, git)
-        configureUPM(upmVersion)
+        configureUPM(versionExt.stage, upmVersion)
         configurePublish(ghPublish)
     }
 
-    UPMExtension configureUPM(Provider<ReleaseVersion> version) {
-        def upmExt = project.extensions.findByType(UPMExtension).with {
-            it.version = version.map({ it.version })
-            return it
+    UPMExtension configureUPM(Provider<String> releaseStage, Provider<ReleaseVersion> version) {
+        def upmExt = project.extensions.findByType(UPMExtension).with { upm ->
+            upm.version = version.map({ it.version })
+            upm.repository = releaseStage.map(logWarn{"Using release stage $it as UPM repository"})
+            return upm
         }
         return upmExt
     }
@@ -111,9 +113,9 @@ class WDKPublishPlugin implements Plugin<Project> {
     }
 
     NamedDomainObjectProvider<Configuration> createArchiveConfiguration(String configName) {
-        def upmArchiveConfig = project.configurations.named(UPMPlugin.ARCHIVE_CONFIGURATION_NAME)
         def archive = project.configurations.register(configName) {
-            it.extendsFrom(upmArchiveConfig.get())
+            def upmArchiveConfig = project.configurations.getByName(UPMPlugin.ARCHIVE_CONFIGURATION_NAME)
+            it.extendsFrom(upmArchiveConfig)
         }
         return archive
     }
@@ -124,6 +126,8 @@ class WDKPublishPlugin implements Plugin<Project> {
         if (project.rootProject == project) {
             versionExt.versionScheme.set(VersionScheme.semver2)
             versionExt.versionCodeScheme.set(VersionCodeScheme.semver)
+        } else {
+            project.logger.warn("Using root project version configuration")
         }
         return versionExt
     }
@@ -136,12 +140,12 @@ class WDKPublishPlugin implements Plugin<Project> {
         def branchName = git.currentBranchName(project)
 
         def releaseNotesTask = project.tasks.register(GITHUB_RELEASE_NOTES_TASK_NAME, GenerateReleaseNotes) { t ->
-            t.from.set(asGHTagName(previousVersion)) //do I need the .orNull here?
+            t.from.set(ghRepo.asTagName(previousVersion)) //do I need the .orNull here?
             t.branch.set(branchName)
             t.strategy.set(new ReleaseNotesBodyStrategy())
             t.output.set(releaseNotesFile)
             t.releaseName.set(currentVersion)
-            onlyIf { shouldGithubPublish(releaseStage, version, branchName) }
+            onlyIf { ghRepo.shouldGithubPublish(git, releaseStage, version, branchName) }
         }
         return releaseNotesTask
     }
@@ -158,49 +162,24 @@ class WDKPublishPlugin implements Plugin<Project> {
         def ghPublishTask = project.tasks.named(GithubPublishPlugin.PUBLISH_TASK_NAME, GithubPublish) {
             it.dependsOn(releaseNotesTask)
             it.from(archiveCfg.map { it.allArtifacts.files })
-            it.tagName.set(asGHTagName(currentVersion))
+            it.tagName.set(ghRepo.asTagName(currentVersion))
             it.releaseName.set(currentVersion)
             it.targetCommitish.set(branchName)
             it.prerelease.set(versionExt.isFinal.orElse(false))
             it.body.set(releaseNotesText)
 
-            it.onlyIf { shouldGithubPublish(versionExt.releaseStage, versionExt.version, branchName) }
+            it.onlyIf { ghRepo.shouldGithubPublish(git, versionExt.releaseStage, versionExt.version, branchName) }
         }
         return ghPublishTask
     }
 
-    boolean shouldGithubPublish(Provider<ReleaseStage> releaseStage,
-                                Provider<ReleaseVersion> version,
-                                Provider<String> branchName) {
-        def currentVersion = version.map { it.version }
-        def previousVersion = version.map { it.previousVersion }
-
-        def isRelease = releaseStage
-                .map { it in [ReleaseStage.Prerelease, ReleaseStage.Final] }
-                .map(warnFalse("Current releaseStage is not in [rc, final], skipping"))
-
-        def noCurrentRelease = ghRepo.releaseNotExists(asGHTagName(currentVersion))
-        def hasChanges = git.areDifferentCommits(asGHTagName(previousVersion), branchName)
-        def currentReleaseNotExists = noCurrentRelease.orElse(hasChanges)
-                .map(warnFalse("there is already a github release for ${currentVersion.get()}, skipping"))
-
-        return  isRelease.getOrElse(false) &&
-                currentReleaseNotExists.getOrElse(true)
+    private <T> Closure<T> logWarn(Closure<String> logString) {
+        return { T it -> logWarn(it, logString(it)) }
     }
 
-
-    private Closure<Boolean> warnFalse(String message) {
-        return { Boolean value ->
-            if (!value) project.logger.warn(message)
-            return value
-        }
-    }
-
-    private static Provider<String> asGHTagName(Provider<String> base) {
-        return base.map { it -> asGHTagName(it) }
-    }
-
-    private static String asGHTagName(String base) {
-        return "v$base".toString()
-    }
+    //this whole memoization pattern is to assure that for a given input, this log only runs once.
+    Closure<?> logWarn = { it, String message ->
+        project.logger.warn(message)
+        return it
+    }.memoize()
 }

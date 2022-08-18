@@ -22,7 +22,6 @@ class UPMTestTools {
 
     static final String DEFAULT_VERSION = "0.0.1"
     static final String DEFAULT_PACKAGE_NAME = "packageName"
-    static final String DEFAULT_REPOSITORY = "integration"
 
     Artifactory artifactory
 
@@ -121,31 +120,4 @@ class UPMTestTools {
         }
         return packageDir
     }
-//
-//    String minimalUPMConfiguration(File baseDir, boolean publishing) {
-//        return minimalUPMConfiguration(baseDir, DEFAULT_PACKAGE_NAME, DEFAULT_REPOSITORY, publishing)
-//    }
-//
-//    String minimalUPMConfiguration(File baseDir = null, String packageName = DEFAULT_PACKAGE_NAME, String repoName = DEFAULT_REPOSITORY, boolean publishing = false) {
-//        if(baseDir != null) writeTestPackage(baseDir, "Assets/$packageName", packageName)
-//        def (username, password) = publishing? credentialsFromEnv() : ["fakecred1", "fakecred2"]
-//        return """
-//        publishing {
-//            repositories {
-//                upm {
-//                    url = ${wrapValueBasedOnType(artifactoryURL(WOOGA_ARTIFACTORY_CI_REPO), String)}
-//                    name = ${wrapValueBasedOnType(repoName, String)}
-//                    credentials {
-//                        username = ${wrapValueBasedOnType(username, String)}
-//                        password = ${wrapValueBasedOnType(password, String)}
-//                    }
-//                }
-//            }
-//        }
-//        upm {
-//            repository = ${wrapValueBasedOnType(repoName, String)}
-//        }
-//        """
-//    }
-
 }
