@@ -7,7 +7,9 @@ import org.ajoberstar.grgit.Grgit
 class GrGitExtended extends Grgit {
 
     static GrGitExtended initWithRemote(File dir, Repository testRepo, String[] ignore = ["*.gradle", "*.bat"], String... ignoreExtra) {
-        init(dir: dir)
+        if(!new File(dir, ".git").exists()) {
+            init(dir: dir).close()
+        }
         def git = open(dir: dir, credentials: new Credentials(testRepo.token))
         git.remote.add(name: "origin", url: testRepo.httpTransportUrl, pushUrl: testRepo.httpTransportUrl)
         git.fetch()

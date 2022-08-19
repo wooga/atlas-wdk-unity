@@ -1,6 +1,5 @@
 package wooga.gradle.wdk.upm.internal
 
-import com.wooga.gradle.test.IntegrationSpec
 import org.apache.http.client.HttpResponseException
 import org.jfrog.artifactory.client.Artifactory
 import org.jfrog.artifactory.client.ArtifactoryClientBuilder
@@ -9,9 +8,6 @@ import wooga.gradle.unity.utils.PackageManifestBuilder
 
 import java.util.stream.IntStream
 
-import static com.wooga.gradle.test.PropertyUtils.wrapValueBasedOnType
-import static com.wooga.gradle.test.PropertyUtils.wrapValueBasedOnType
-import static com.wooga.gradle.test.PropertyUtils.wrapValueBasedOnType
 
 //TODO: test this task and see why it gets stuck
 //https://jenkins.atlas.wooga.com/blue/organizations/jenkins/wdk_unity%2Fwdk-unity-AsyncAwait/detail/PR-48/1/pipeline
@@ -83,12 +79,14 @@ class UPMTestTools {
     }
 
     boolean hasPackageOnArtifactory(String repoName = WOOGA_ARTIFACTORY_CI_REPO, String artifactName = DEFAULT_PACKAGE_NAME, String artifactVersion = DEFAULT_VERSION) {
-        List<RepoPath> packages = artifactory.searches()
-                .repositories(repoName)
-                .artifactsByName(artifactName)
-                .version(artifactVersion)
-                .doSearch()
-        packages = packages.findAll {it.itemPath.endsWith(".json") && it.itemPath.contains(artifactVersion)}
+        def packages = retry({List it -> it.size() == 0}) {
+            return artifactory.searches()
+                    .repositories(repoName)
+                    .artifactsByName(artifactName)
+                    .version(artifactVersion)
+                    .doSearch()
+                    .findAll {it.itemPath.endsWith(".json") && it.itemPath.contains(artifactVersion)}
+        }
         assert packages.size() > 0: "Could not find artifact `${artifactName}` on repository ${repoName}"
         return true
     }
@@ -119,5 +117,18 @@ class UPMTestTools {
             }
         }
         return packageDir
+    }
+
+    public static <T> T retry(long timeoutMs = 60000, long intervalMs = 5000, Closure<Boolean> retryCondition, Closure<T> operation) {
+        def startTime = System.currentTimeMillis()
+        def result = operation()
+        while(retryCondition.call(result)) {
+            Thread.sleep(intervalMs)
+            result = operation()
+            if(System.currentTimeMillis() > startTime + timeoutMs) {
+                return result
+            }
+        }
+        return result
     }
 }
