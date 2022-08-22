@@ -22,4 +22,8 @@ class WDKPublishIntegrationSpec extends UnityIntegrationSpec {
         def result = UPMTestTools.retry(timeoutMs, poolInterval, {it == null}, operation)
         return result != null
     }
+
+    boolean timeout(long poolInterval = 10000, long timeoutMs = 60000, Closure operation) {
+        return UPMTestTools.retry(timeoutMs, poolInterval, {it == null}, operation)
+    }
 }

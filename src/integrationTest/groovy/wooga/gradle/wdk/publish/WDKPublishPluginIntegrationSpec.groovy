@@ -53,7 +53,7 @@ class WDKPublishPluginIntegrationSpec extends WDKPublishIntegrationSpec
     def "only runs github release on some stages"() {
         given:
         buildFile << applyPlugin(WDKPublishPlugin) << "\n"
-        buildFile << minimalUPMConfiguration(projectDir)
+        buildFile << minimalUPMConfiguration(projectDir, "any")
         and:
         buildFile << mockTask(WDKPublishPlugin.GITHUB_RELEASE_NOTES_TASK_NAME, """
             def file = it.output.get().asFile
@@ -236,7 +236,7 @@ class WDKPublishPluginIntegrationSpec extends WDKPublishIntegrationSpec
         and: "a subproject with the WDKPublish plugin applied"
         subBuildFile << """
             ${applyPlugin(WDKPublishPlugin)}
-            ${minimalUPMConfiguration(subprojDir, true)}
+            ${minimalUPMConfiguration(subprojDir, DEFAULT_PACKAGE_NAME, DEFAULT_REPOSITORY, true)}
             ${configureGithubPlugin(testRepo)}
             ${configureMockUnity(subprojDir)}
             ${mockTask(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME, """
@@ -254,8 +254,11 @@ class WDKPublishPluginIntegrationSpec extends WDKPublishIntegrationSpec
         result.standardOutput.contains("upm package ver:|&|&${semver2Version}|&|&")
         result.standardOutput.contains("project vercode:|&|&${versionCode}|&|&")
         result.standardOutput.contains("subproject vercode:|&|&${versionCode}|&|&")
-        testRepo.listReleases().toList().count { it.tagName == expectedGHVersion } == 1
-        upmUtils.hasPackageOnArtifactory(UPMTestTools.WOOGA_ARTIFACTORY_CI_REPO, UPMTestTools.DEFAULT_PACKAGE_NAME, semver2Version)
+        UPMTestTools.retry(60000, 10000, {it == 0}) {
+            testRepo.listReleases().toList().count { it.tagName == expectedGHVersion }
+        } == 1
+
+        upmUtils.hasPackageOnArtifactory(WOOGA_ARTIFACTORY_CI_REPO, DEFAULT_PACKAGE_NAME, semver2Version)
 
         cleanup:
         testRepo.cleanupReleases()

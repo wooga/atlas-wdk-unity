@@ -6,11 +6,12 @@ import static com.wooga.gradle.test.PropertyUtils.wrapValueBasedOnType
 import static com.wooga.gradle.test.PropertyUtils.wrapValueBasedOnType
 import static com.wooga.gradle.test.PropertyUtils.wrapValueBasedOnType
 
-class UPMSnippets {
+class UPMSnippets implements UPMSnippetsTrait {
 }
 
 trait UPMSnippetsTrait {
 
+    static final String WOOGA_ARTIFACTORY_CI_REPO = UPMTestTools.WOOGA_ARTIFACTORY_CI_REPO
     static final String DEFAULT_PACKAGE_NAME = UPMTestTools.DEFAULT_PACKAGE_NAME
     static final String DEFAULT_REPOSITORY = "integration"
 
@@ -20,8 +21,8 @@ trait UPMSnippetsTrait {
 
     static String minimalUPMConfiguration(File baseDir = null, String packageName = DEFAULT_PACKAGE_NAME, String repoName = DEFAULT_REPOSITORY, boolean publishing = false) {
         def upmTestTools = new UPMTestTools()
-        if(baseDir != null) upmTestTools.writeTestPackage(baseDir, "Assets/$packageName", packageName)
-        def (username, password) = publishing? UPMTestTools.credentialsFromEnv() : ["fakecred1", "fakecred2"]
+        if (baseDir != null) upmTestTools.writeTestPackage(baseDir, "Assets/$packageName", packageName)
+        def (username, password) = publishing ? UPMTestTools.credentialsFromEnv() : ["fakecred1", "fakecred2"]
         return """
         publishing {
             repositories {
@@ -36,6 +37,7 @@ trait UPMSnippetsTrait {
             }
         }
         upm {
+            packageDirectory = ${wrapValueBasedOnType("Assets/$packageName", File)}
             repository = ${wrapValueBasedOnType(repoName, String)}
         }
         """

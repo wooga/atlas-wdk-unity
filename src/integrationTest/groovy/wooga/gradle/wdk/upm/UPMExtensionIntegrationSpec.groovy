@@ -43,51 +43,51 @@ class UPMExtensionIntegrationSpec extends UPMIntegrationSpec implements UPMSnipp
         when:
         set.location = invocation == PropertySetInvocation.none ? PropertyLocation.none : set.location
         def propertyQuery = runPropertyQuery(get, set)
-                                            .withSerializer(Directory, {
-                                                String dir -> new File(projectDir, dir).absolutePath
-                                            }).withSerializer("Provider<Directory>", {
-                                                String dir -> new File(new File(projectDir, "build"), dir).absolutePath
-                                            })
+                .withSerializer(Directory, {
+                    String dir -> dir ? new File(projectDir, dir).absolutePath : null
+                }).withSerializer("Provider<Directory>", {
+            String dir -> dir ? new File(new File(projectDir, "build"), dir).absolutePath : null
+        })
         then:
         propertyQuery.matches(rawValue)
 
         where:
 
-        property            | invocation  | rawValue           | type
-        "repository"        | providerSet | "repoName"         | "Provider<String>"
-        "repository"        | assignment  | "repoName"         | "Provider<String>"
-        "repository"        | setter      | "repoName"         | "String"
-        "repository"        | assignment  | "repoName"         | "String"
+        property            | invocation  | rawValue      | type
+        "repository"        | providerSet | "repoName"    | "Provider<String>"
+        "repository"        | assignment  | "repoName"    | "Provider<String>"
+        "repository"        | setter      | "repoName"    | "String"
+        "repository"        | assignment  | "repoName"    | "String"
 
-        "version"           | providerSet | "0.0.1"            | "Provider<String>"
-        "version"           | assignment  | "0.0.1"            | "Provider<String>"
-        "version"           | setter      | "0.0.1"            | "String"
-        "version"           | assignment  | "0.0.1"            | "String"
-        "version"           | none        | "unspecified"      | "String" //unspecified is the default for project.version
+        "version"           | providerSet | "0.0.1"       | "Provider<String>"
+        "version"           | assignment  | "0.0.1"       | "Provider<String>"
+        "version"           | setter      | "0.0.1"       | "String"
+        "version"           | assignment  | "0.0.1"       | "String"
+        "version"           | none        | "unspecified" | "String" //unspecified is the default for project.version
 
-        "username"          | providerSet | "user"             | "Provider<String>"
-        "username"          | assignment  | "user"             | "Provider<String>"
-        "username"          | setter      | "user"             | "String"
-        "username"          | assignment  | "user"             | "String"
-        "username"          | none        | null               | "String"
+        "username"          | providerSet | "user"        | "Provider<String>"
+        "username"          | assignment  | "user"        | "Provider<String>"
+        "username"          | setter      | "user"        | "String"
+        "username"          | assignment  | "user"        | "String"
+        "username"          | none        | null          | "String"
         //once set, should we be able to get credentials in build.gradle?
-        "password"          | providerSet | "pwd"              | "Provider<String>"
-        "password"          | assignment  | "pwd"              | "Provider<String>"
-        "password"          | setter      | "pwd"              | "String"
-        "password"          | assignment  | "pwd"              | "String"
-        "password"          | none        | null               | "String"
+        "password"          | providerSet | "pwd"         | "Provider<String>"
+        "password"          | assignment  | "pwd"         | "Provider<String>"
+        "password"          | setter      | "pwd"         | "String"
+        "password"          | assignment  | "pwd"         | "String"
+        "password"          | none        | null          | "String"
 
-        "packageDirectory"  | providerSet | "upmpkg"           | "Provider<Directory>"
-        "packageDirectory"  | assignment  | "upmpkg"           | "Provider<Directory>"
-        "packageDirectory"  | setter      | "upmpkg"           | "Directory"
-        "packageDirectory"  | assignment  | "upmpkg"           | "Directory"
-        "packageDirectory"  | none        | existingUPMPackage | "Directory"
+        "packageDirectory"  | providerSet | "upmpkg"      | "Provider<Directory>"
+        "packageDirectory"  | assignment  | "upmpkg"      | "Provider<Directory>"
+        "packageDirectory"  | setter      | "upmpkg"      | "Directory"
+        "packageDirectory"  | assignment  | "upmpkg"      | "Directory"
+        "packageDirectory"  | none        | null          | "Directory"
 
-        "generateMetaFiles" | providerSet | true               | "Provider<Boolean>"
-        "generateMetaFiles" | assignment  | false              | "Provider<Boolean>"
-        "generateMetaFiles" | setter      | true               | "Boolean"
-        "generateMetaFiles" | assignment  | false              | "Boolean"
-        "generateMetaFiles" | none        | false              | "Boolean"
+        "generateMetaFiles" | providerSet | true          | "Provider<Boolean>"
+        "generateMetaFiles" | assignment  | false         | "Provider<Boolean>"
+        "generateMetaFiles" | setter      | true          | "Boolean"
+        "generateMetaFiles" | assignment  | false         | "Boolean"
+        "generateMetaFiles" | none        | false         | "Boolean"
 
         set = new PropertySetterWriter("upm", property)
                 .set(rawValue, type)
@@ -99,6 +99,10 @@ class UPMExtensionIntegrationSpec extends UPMIntegrationSpec implements UPMSnipp
     def "can set property from environment"() {
         given: "minimal configured upm project"
         buildFile << minimalUPMConfiguration(projectDir, existingUPMPackage, property == "repository" ? rawValue : "any")
+        buildFile << """ upm {
+            ${property == "repository" ? "repository = null" : ""}
+            ${property == "packageDirectory" ? "packageDirectory = null" : ""}
+        }"""
 
         when:
         def propertyQuery = runPropertyQuery(get, set).withSerializer(Directory) {
@@ -135,6 +139,10 @@ class UPMExtensionIntegrationSpec extends UPMIntegrationSpec implements UPMSnipp
     def "can set property with gradle property"() {
         given: "minimal configured upm project"
         buildFile << minimalUPMConfiguration(projectDir, existingUPMPackage, property == "repository" ? rawValue : "any")
+        buildFile << """ upm {
+            ${property == "repository" ? "repository = null" : ""}
+            ${property == "packageDirectory" ? "packageDirectory = null" : ""}
+        }"""
 
         when:
         def propertyQuery = runPropertyQuery(get, set).withSerializer(Directory) {

@@ -1,5 +1,7 @@
 package wooga.gradle.wdk.upm.internal
 
+import org.apache.commons.lang3.RandomStringUtils
+import org.apache.commons.lang3.RandomUtils
 import org.apache.http.client.HttpResponseException
 import org.jfrog.artifactory.client.Artifactory
 import org.jfrog.artifactory.client.ArtifactoryClientBuilder
@@ -17,7 +19,12 @@ class UPMTestTools {
     static final String WOOGA_ARTIFACTORY_CI_REPO = "atlas-upm-integrationTest"
 
     static final String DEFAULT_VERSION = "0.0.1"
-    static final String DEFAULT_PACKAGE_NAME = "packageName"
+    static final String DEFAULT_PACKAGE_NAME = testPkgName("default")
+    static final String prefix = RandomStringUtils.randomAlphabetic(4)
+
+    static String testPkgName(String name) {
+        return "${prefix}$name"
+    }
 
     Artifactory artifactory
 
@@ -59,6 +66,7 @@ class UPMTestTools {
         List<RepoPath> searchItems = artifactory.searches()
                 .repositories(repoName)
                 .artifactsCreatedInDateRange(fromMs, toMs)
+                .artifactsByName("${prefix}*")
                 .doSearch()
 
         for (RepoPath searchItem : searchItems) {
@@ -91,7 +99,8 @@ class UPMTestTools {
         return true
     }
 
-    File writeTestPackage(File baseDir, String packageDirectory, String packageName, String packageVersion = DEFAULT_VERSION, boolean hasMetafiles = true, int fileCount = 1) {
+    static File writeTestPackage(File baseDir, String packageDirectory, String packageName = DEFAULT_PACKAGE_NAME, String packageVersion = DEFAULT_VERSION, boolean hasMetafiles = true, int fileCount = 1) {
+        packageName = testPkgName(packageName)
         def packageDir = new File(baseDir, packageDirectory)
         packageDir.mkdirs()
         def packageManifestFile = new File(packageDir, "package.json")
@@ -131,4 +140,6 @@ class UPMTestTools {
         }
         return result
     }
+
+
 }

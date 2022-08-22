@@ -1,6 +1,5 @@
 package wooga.gradle.wdk.upm.internal
 
-import org.gradle.api.file.Directory
 import org.gradle.api.logging.Logger
 
 import java.nio.file.Files
@@ -42,7 +41,7 @@ class UnityProjects {
                 logger?.warn("No package manifest files (package.json) were found")
                 break
             default:
-                logger?.warn("More then one package manifest file (package.json) was found")
+                logger?.warn("More then one package manifest file (package.json) was found, using ${upmBasePath.toAbsolutePath()}")
                 return upmBasePath.toAbsolutePath()
         }
         return null

@@ -42,8 +42,7 @@ class UPMExtension implements UPMPublishSpec, UPMPackSpec {
 
             version.convention(UPMConventions.version.getStringValueProvider(project)
                     .orElse(project.provider { project.version.toString() }))
-            packageDirectory.convention(UPMConventions.packageDirectory.getDirectoryValueProvider(project).
-                    orElse(findUPMPackageDir(project, project.projectDir)))
+            packageDirectory.convention(UPMConventions.packageDirectory.getDirectoryValueProvider(project))
             generateMetaFiles.convention(UPMConventions.generateMetaFiles.getBooleanValueProvider(project))
 
             username.convention(UPMConventions.username.getStringValueProvider(project))
@@ -51,12 +50,6 @@ class UPMExtension implements UPMPublishSpec, UPMPackSpec {
         }
 
         return extension
-    }
-
-    private static Provider<Directory> findUPMPackageDir(Project project, File baseDir) {
-        return project.provider {
-            project.layout.projectDirectory.dir(UnityProjects.findUPMPackageDirectory(baseDir, project.logger).toString())
-        }
     }
 
     private static Map<String, UPMArtifactRepository> upmRepoFromPublishing(PublishingExtension publishExt) {
