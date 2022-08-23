@@ -96,6 +96,56 @@ class WDKPublishPluginSpec extends BaseGradleSpec {
         releaseScope = "major"
     }
 
+    @Unroll("configures upm extension version as #semver2Version when version plugin version is set as #versionScheme-#releaseStage-#releaseScope")
+    def "a"() {
+        given:
+        def subproject = utils.createSubproject("subproject")
+        def subProjUtils = new GradleTestUtils(subproject)
+        project.ext["release.scope"] = releaseScope
+        project.ext["release.stage"] = releaseStage
+
+        and: "git repository needed for test to track its own versions through tags"
+        GrGitExtended.initWithIgnoredFiles(projectDir, "*")
+
+        when:
+        subproject.plugins.apply(WDKPublishPlugin)
+        and: "version plugin version forced to..."
+        utils.requireExtension(VersionPluginExtension).with {
+            it.versionScheme = versionScheme
+        }
+
+        then:
+        def upmExt = subProjUtils.requireExtension(UPMExtension)
+        project.version.toString() == baseVersion
+        subproject.version.toString() == baseVersion
+        upmExt.version.get() == semver2Version
+
+
+        where:
+        versionScheme         | baseVersion         | semver2Version   | releaseStage | releaseScope
+        VersionScheme.semver  | "1.0.0-master00001" | "1.0.0-master.1" | "snapshot"   | "major"
+        VersionScheme.semver2 | "1.0.0-master.1"    | "1.0.0-master.1" | "snapshot"   | "major"
+        VersionScheme.semver  | "1.0.0-rc00001"     | "1.0.0-rc.1"     | "rc"         | "major"
+        VersionScheme.semver2 | "1.0.0-rc.1"        | "1.0.0-rc.1"     | "rc"         | "major"
+        VersionScheme.semver  | "1.0.0"             | "1.0.0"          | "final"      | "major"
+        VersionScheme.semver2 | "1.0.0"             | "1.0.0"          | "final"      | "major"
+
+        VersionScheme.semver  | "0.1.0-master00001" | "0.1.0-master.1" | "snapshot"   | "minor"
+        VersionScheme.semver2 | "0.1.0-master.1"    | "0.1.0-master.1" | "snapshot"   | "minor"
+        VersionScheme.semver  | "0.1.0-rc00001"     | "0.1.0-rc.1"     | "rc"         | "minor"
+        VersionScheme.semver2 | "0.1.0-rc.1"        | "0.1.0-rc.1"     | "rc"         | "minor"
+        VersionScheme.semver  | "0.1.0"             | "0.1.0"          | "final"      | "minor"
+        VersionScheme.semver2 | "0.1.0"             | "0.1.0"          | "final"      | "minor"
+
+        VersionScheme.semver  | "0.0.1-master00001" | "0.0.1-master.1" | "snapshot"   | "patch"
+        VersionScheme.semver2 | "0.0.1-master.1"    | "0.0.1-master.1" | "snapshot"   | "patch"
+        VersionScheme.semver  | "0.0.1-rc00001"     | "0.0.1-rc.1"     | "rc"         | "patch"
+        VersionScheme.semver2 | "0.0.1-rc.1"        | "0.0.1-rc.1"     | "rc"         | "patch"
+        VersionScheme.semver  | "0.0.1"             | "0.0.1"          | "final"      | "patch"
+        VersionScheme.semver2 | "0.0.1"             | "0.0.1"          | "final"      | "patch"
+
+    }
+
 
     @Unroll("configure github release notes from #previousVersion to HEAD")
     def "configure github release notes"() {
@@ -148,7 +198,7 @@ class WDKPublishPluginSpec extends BaseGradleSpec {
         githubPublishTask.tagName.get() == expectedGHTag
         githubPublishTask.releaseName.get() == expectedVersion
         githubPublishTask.targetCommitish.get() == grgit.branch.current().name
-        githubPublishTask.prerelease.get() == (releaseStage == "final")
+        githubPublishTask.prerelease.get() == (releaseStage != "final")
         githubPublishTask.body.get() == fixtures.fakeReleaseNotes.text
 
         where:

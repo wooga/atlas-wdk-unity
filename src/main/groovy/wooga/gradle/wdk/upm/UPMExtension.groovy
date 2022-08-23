@@ -1,11 +1,9 @@
 package wooga.gradle.wdk.upm
 
 import org.gradle.api.Project
-import org.gradle.api.file.Directory
 import org.gradle.api.provider.Provider
 import org.gradle.api.publish.PublishingExtension
 import wooga.gradle.wdk.upm.internal.Extensions
-import wooga.gradle.wdk.upm.internal.UnityProjects
 import wooga.gradle.wdk.upm.internal.repository.UPMArtifactRepository
 import wooga.gradle.wdk.upm.traits.UPMPackSpec
 import wooga.gradle.wdk.upm.traits.UPMPublishSpec
@@ -19,10 +17,10 @@ class UPMExtension implements UPMPublishSpec, UPMPackSpec {
     static UPMExtension newWithPublishingConventions(Project project, PublishingExtension publishingExt, String extensionName) {
         def extension = newWithConventions(project, extensionName)
         extension.with {
-            def upmRepositories = project.provider({ upmRepoFromPublishing(publishingExt) })
-            //better this than zip, bc zip have awful error messages, and like this we can pinpoint the eventual error better.
-            it.selectedUPMRepository = upmRepositories.map {
-                upmRepos -> upmRepos[extension.repository.get()]
+            def upmRepositories = project.provider({ upmReposFromPublishing(publishingExt) })
+
+            it.selectedUPMRepository = upmRepositories.flatMap {
+                upmRepos -> extension.repository.map{ upmRepos[it]}
             }
 
             username.convention(UPMConventions.username.getStringValueProvider(project)
@@ -52,7 +50,7 @@ class UPMExtension implements UPMPublishSpec, UPMPackSpec {
         return extension
     }
 
-    private static Map<String, UPMArtifactRepository> upmRepoFromPublishing(PublishingExtension publishExt) {
+    private static Map<String, UPMArtifactRepository> upmReposFromPublishing(PublishingExtension publishExt) {
         return publishExt.repositories.withType(UPMArtifactRepository).stream().map {
             repo -> new Tuple2<>(repo.name, repo)
         }.collect(Collectors.toMap({ it.first as String }, { it.second as UPMArtifactRepository }))

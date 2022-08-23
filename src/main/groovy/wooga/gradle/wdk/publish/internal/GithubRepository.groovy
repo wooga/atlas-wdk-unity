@@ -64,14 +64,14 @@ class GithubRepository {
 
         def isRelease = releaseStage
                 .map { it in [ReleaseStage.Prerelease, ReleaseStage.Final] }
-                .map(warnFalse{"Current releaseStage is not in [rc, final], skipping"})
+                .map(warnIfFalse{"Current releaseStage is not in [rc, final], skipping"})
                 .orElse(emptyWarnProvider{"Could not establish whether the release state is a final one"})
 
         def noCurrentRelease = releaseNotExists(asTagName(currentVersion))
-                .map(warnFalse{"There is already a github release for ${currentVersion.get()}, skipping"})
+                .map(warnIfFalse{"There is already a github release for ${currentVersion.get()}, skipping"})
 
         def hasChanges = git.areDifferentCommits(asTagName(previousVersion), branchName)
-                .map(warnFalse{"Current commit is the same as of last tag ${asTagName(previousVersion.get())}, skipping"})
+                .map(warnIfFalse{"Current commit is the same as of last tag ${asTagName(previousVersion.get())}, skipping"})
 
         def currentReleaseNotExists = noCurrentRelease.orElse(hasChanges)
                 .orElse(emptyWarnProvider{"Could not establish whether a github release already exists for this version"})
@@ -88,7 +88,7 @@ class GithubRepository {
         return "v$base".toString()
     }
 
-    private Closure<Boolean> warnFalse(Closure<String> message) {
+    private Closure<Boolean> warnIfFalse(Closure<String> message) {
         return { it -> warnFalse(it, message(it))}
     }
 

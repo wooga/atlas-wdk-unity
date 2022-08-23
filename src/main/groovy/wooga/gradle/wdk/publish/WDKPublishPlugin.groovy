@@ -84,7 +84,9 @@ class WDKPublishPlugin implements Plugin<Project> {
         def ghReleaseNotes = configureReleaseNotes(versionExt.version, versionExt.releaseStage, extension.releaseNotesFile)
         def ghPublish = configureGithubPublish(versionExt, ghReleaseNotes, archiveCfg)
 
-        def upmVersion = project == project.rootProject ? versionExt.version : Versions.semver2Version(project.rootProject, git)
+        def upmVersion = project == project.rootProject ?
+                versionExt.version :
+                Versions.semver2Version(project.rootProject, git)
         configureUPM(versionExt.stage, upmVersion)
         configurePublish(ghPublish)
     }
@@ -140,7 +142,7 @@ class WDKPublishPlugin implements Plugin<Project> {
         def branchName = git.currentBranchName(project)
 
         def releaseNotesTask = project.tasks.register(GITHUB_RELEASE_NOTES_TASK_NAME, GenerateReleaseNotes) { t ->
-            t.from.set(ghRepo.asTagName(previousVersion)) //do I need the .orNull here?
+            t.from.set(ghRepo.asTagName(previousVersion))
             t.branch.set(branchName)
             t.strategy.set(new ReleaseNotesBodyStrategy())
             t.output.set(releaseNotesFile)
@@ -152,7 +154,7 @@ class WDKPublishPlugin implements Plugin<Project> {
 
     TaskProvider<GithubPublish> configureGithubPublish(VersionPluginExtension versionExt,
                                                        TaskProvider<GenerateReleaseNotes> releaseNotesTask,
-                                                       Provider<Configuration> archiveCfg) {
+                                                       Provider<Configuration> upmArchive) {
         def currentVersion = versionExt.version.map { it.version }
         def branchName = git.currentBranchName(project)
 
@@ -161,11 +163,11 @@ class WDKPublishPlugin implements Plugin<Project> {
                 .map { it.asFile.text }
         def ghPublishTask = project.tasks.named(GithubPublishPlugin.PUBLISH_TASK_NAME, GithubPublish) {
             it.dependsOn(releaseNotesTask)
-            it.from(archiveCfg.map { it.allArtifacts.files })
+            it.from(upmArchive.map { it.allArtifacts.files })
             it.tagName.set(ghRepo.asTagName(currentVersion))
             it.releaseName.set(currentVersion)
             it.targetCommitish.set(branchName)
-            it.prerelease.set(versionExt.isFinal.orElse(false))
+            it.prerelease.set(versionExt.isFinal.map{!it as boolean}.orElse(true))
             it.body.set(releaseNotesText)
 
             it.onlyIf { ghRepo.shouldGithubPublish(git, versionExt.releaseStage, versionExt.version, branchName) }

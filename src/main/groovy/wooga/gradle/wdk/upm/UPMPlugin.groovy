@@ -22,7 +22,6 @@ import org.jfrog.gradle.plugin.artifactory.task.ArtifactoryTask
 import wooga.gradle.unity.UnityPlugin
 import wooga.gradle.unity.tasks.GenerateUpmPackage
 import wooga.gradle.unity.tasks.Unity
-import wooga.gradle.wdk.unity.WdkUnityPluginConventions
 import wooga.gradle.wdk.upm.internal.UnityProjects
 import wooga.gradle.wdk.upm.internal.repository.DefaultUPMRepositoryHandlerConvention
 
@@ -35,6 +34,7 @@ class UPMPlugin implements Plugin<Project> {
     static final String GENERATE_UPM_PACKAGE_TASK_NAME = "upmPack"
     static final String GENERATE_META_FILES_TASK_NAME = "generateMetaFiles"
     static final String ARCHIVE_CONFIGURATION_NAME = "upm"
+    static final String PUBLICATION_NAME = "upm"
 
 
     private final PluginRegistry pluginRegistry
@@ -90,7 +90,7 @@ class UPMPlugin implements Plugin<Project> {
         }
         def upmArtifact = project.artifacts.add(archiveConfig.name, upmPack)
         def publishing = project.extensions.getByType(PublishingExtension)
-        def upmPublication = publishing.publications.maybeCreate(WdkUnityPluginConventions.upmPublicationName, IvyPublication).with { publication ->
+        def upmPublication = publishing.publications.maybeCreate(PUBLICATION_NAME, IvyPublication).with { publication ->
             project.afterEvaluate { ->
                 publication.module = upmPack.flatMap { it.packageName }.getOrNull()
                 publication.revision = upmPack.flatMap {it.archiveVersion }.getOrNull()
@@ -129,7 +129,6 @@ class UPMPlugin implements Plugin<Project> {
         def publishTask = project.tasks.named(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME)
         publishTask.configure {it.dependsOn(artifactoryPublishTask) }
 
-        //TODO: test this on UPMPlugin exclusive environment
         if (project.rootProject != project && project.rootProject.plugins.hasPlugin(PublishingPlugin)) {
             project.rootProject.tasks.named(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME) {
                it.dependsOn(publishTask)
