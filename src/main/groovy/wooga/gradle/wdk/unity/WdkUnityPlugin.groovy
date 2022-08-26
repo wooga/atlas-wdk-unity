@@ -342,6 +342,13 @@ class WdkUnityPlugin implements Plugin<Project> {
             it.packageDirectory.convention(extension.packageDirectory)
         }
 
+        upmGenerateMetaFiles.configure({
+            it.onlyIf {
+                upmPack.get().onlyIf.isSatisfiedBy(upmPack.get())
+            }
+        })
+
+
         // Create the configuration
         def config = project.configurations.maybeCreate(WdkUnityPluginConventions.upmConfigurationName)
         config.transitive = false
