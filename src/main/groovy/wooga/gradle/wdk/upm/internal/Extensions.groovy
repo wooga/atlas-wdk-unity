@@ -5,6 +5,8 @@ import org.gradle.api.Task
 import org.gradle.api.internal.provider.AbstractProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.internal.Describables
@@ -18,7 +20,7 @@ class Extensions {
         Arrays.stream(extensionClass.methods)
                 .filter { Property.isAssignableFrom(it.returnType) }
                 .filter { it.parameterCount == 0 }
-                .filter { [Input, Internal].any { annotation -> it.isAnnotationPresent(annotation) } }
+                .filter { [Input, InputDirectory, InputFile, Internal].any { annotation -> it.isAnnotationPresent(annotation) } }
                 .map { PropertyInfo.fromGetter(owner, it) }
                 .forEach { it.attachPropertyOwner(ownerName) }
     }

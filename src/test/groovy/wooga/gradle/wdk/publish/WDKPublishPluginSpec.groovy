@@ -9,10 +9,10 @@ import wooga.gradle.githubReleaseNotes.tasks.GenerateReleaseNotes
 import wooga.gradle.version.VersionCodeScheme
 import wooga.gradle.version.VersionPluginExtension
 import wooga.gradle.version.VersionScheme
-import wooga.gradle.wdk.internal.GrGitExtended
-import wooga.gradle.wdk.publish.internal.BaseGradleSpec
-import wooga.gradle.wdk.publish.internal.GradleTestUtils
+import wooga.gradle.wdk.publish.tools.BaseGradleSpec
 import wooga.gradle.wdk.publish.internal.releasenotes.ReleaseNotesBodyStrategy
+import wooga.gradle.wdk.tools.GrGitExtended
+import wooga.gradle.wdk.tools.GradleTestUtils
 import wooga.gradle.wdk.upm.UPMExtension
 import wooga.gradle.wdk.upm.UPMPlugin
 
@@ -46,10 +46,16 @@ class WDKPublishPluginSpec extends BaseGradleSpec {
         utils.requireExtension(VersionPluginExtension).with {
             it.versionScheme = versionScheme
         }
+        and: "upm plugin configured with some project"
+        utils.requireExtension(UPMExtension).projects {
+            it.create("sample")
+            it.create("otherSample")
+        }
 
         then:
         def upmExt = utils.requireExtension(UPMExtension)
-        upmExt.version.get() == expectedVersion
+        project.version.toString() == expectedVersion
+        upmExt.projects.each {it.version.get() == expectedVersion }
         upmExt.repository.get() == releaseStage
 
         where:
@@ -80,10 +86,17 @@ class WDKPublishPluginSpec extends BaseGradleSpec {
         utils.requireExtension(VersionPluginExtension).with {
             it.versionScheme = versionScheme
         }
+        and: "upm plugin configured with some project"
+        subProjUtils.requireExtension(UPMExtension).projects {
+            it.create("sample")
+            it.create("otherSample")
+        }
 
         then:
         def upmExt = subProjUtils.requireExtension(UPMExtension)
-        upmExt.version.get() == semver2Version
+        upmExt.projects.each {
+            it.version.get() == semver2Version
+        }
 
         where:
         versionScheme         | semver2Version   | releaseStage
@@ -97,7 +110,7 @@ class WDKPublishPluginSpec extends BaseGradleSpec {
     }
 
     @Unroll("configures upm extension version as #semver2Version when version plugin version is set as #versionScheme-#releaseStage-#releaseScope")
-    def "a"() {
+    def "configures upm extension version as #semver2Version when version plugin version is set as #versionScheme-#releaseStage-#releaseScope"() {
         given:
         def subproject = utils.createSubproject("subproject")
         def subProjUtils = new GradleTestUtils(subproject)
@@ -113,12 +126,19 @@ class WDKPublishPluginSpec extends BaseGradleSpec {
         utils.requireExtension(VersionPluginExtension).with {
             it.versionScheme = versionScheme
         }
+        and: "upm plugin configured with some project"
+        subProjUtils.requireExtension(UPMExtension).projects {
+            it.create("sample")
+            it.create("otherSample")
+        }
 
         then:
         def upmExt = subProjUtils.requireExtension(UPMExtension)
         project.version.toString() == baseVersion
         subproject.version.toString() == baseVersion
-        upmExt.version.get() == semver2Version
+        upmExt.projects.each {
+            it.version.get() == semver2Version
+        }
 
 
         where:
@@ -235,11 +255,11 @@ class WDKPublishPluginSpec extends BaseGradleSpec {
         project.plugins.apply(WDKPublishPlugin)
 
         then:
-        def upmArchiveConfig = project.configurations.getByName(UPMPlugin.ARCHIVE_CONFIGURATION_NAME)
+        def upmArchiveConfig = project.configurations.getByName(UPMPlugin.ROOT_ARCHIVE_CONFIGURATION_NAME)
         def archiveCfg = project.configurations.getByName(configName)
         archiveCfg.extendsFrom.contains(upmArchiveConfig)
 
-        archiveCfg.allArtifacts.files.first() == upmArchiveConfig.artifacts.files.first()
+        archiveCfg.allArtifacts.collect{it.file} == upmArchiveConfig.allArtifacts.collect{it.file}
 
         where:
         configName = WDKPublishPlugin.ARCHIVE_CONFIGURATION_NAME

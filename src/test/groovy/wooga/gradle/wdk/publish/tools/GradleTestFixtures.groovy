@@ -1,4 +1,4 @@
-package wooga.gradle.wdk.publish.internal
+package wooga.gradle.wdk.publish.tools
 
 import org.gradle.api.Project
 

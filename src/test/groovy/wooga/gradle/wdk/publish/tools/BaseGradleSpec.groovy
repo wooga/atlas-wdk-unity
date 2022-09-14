@@ -1,7 +1,8 @@
-package wooga.gradle.wdk.publish.internal
+package wooga.gradle.wdk.publish.tools
 
 import nebula.test.ProjectSpec
 import org.ajoberstar.grgit.Grgit
+import wooga.gradle.wdk.tools.GradleTestUtils
 
 class BaseGradleSpec extends ProjectSpec {
 

@@ -22,7 +22,6 @@ import wooga.gradle.version.VersionScheme
 import wooga.gradle.version.internal.release.base.ReleaseVersion
 import wooga.gradle.wdk.publish.internal.Git
 import wooga.gradle.wdk.publish.internal.GithubRepository
-import wooga.gradle.wdk.publish.internal.Versions
 import wooga.gradle.wdk.publish.internal.releasenotes.ReleaseNotesBodyStrategy
 import wooga.gradle.wdk.upm.UPMExtension
 import wooga.gradle.wdk.upm.UPMPlugin
@@ -86,15 +85,20 @@ class WDKPublishPlugin implements Plugin<Project> {
 
         def upmVersion = project == project.rootProject ?
                 versionExt.version :
-                Versions.semver2Version(project.rootProject, git)
+                versionExt.inferVersion(VersionScheme.upm)
         configureUPM(versionExt.stage, upmVersion)
         configurePublish(ghPublish)
     }
 
     UPMExtension configureUPM(Provider<String> releaseStage, Provider<ReleaseVersion> version) {
+
         def upmExt = project.extensions.findByType(UPMExtension).with { upm ->
-            upm.version = version.map({ it.version })
-            upm.repository = releaseStage.map(logWarn{"Using release stage $it as UPM repository"})
+            upm.projects.configureEach { upmProject ->
+                upmProject.version.convention(version.map {it.version }
+                                                     .map(logInfo{ String versionStr -> "setting UPM project ${upmProject.name} version as ${versionStr}" })
+                )
+            }
+            upm.repository.convention(releaseStage.map(logWarn{"Using release stage $it as UPM repository"}))
             return upm
         }
         return upmExt
@@ -116,7 +120,7 @@ class WDKPublishPlugin implements Plugin<Project> {
 
     NamedDomainObjectProvider<Configuration> createArchiveConfiguration(String configName) {
         def archive = project.configurations.register(configName) {
-            def upmArchiveConfig = project.configurations.getByName(UPMPlugin.ARCHIVE_CONFIGURATION_NAME)
+            def upmArchiveConfig = project.configurations.getByName(UPMPlugin.ROOT_ARCHIVE_CONFIGURATION_NAME)
             it.extendsFrom(upmArchiveConfig)
         }
         return archive
@@ -163,7 +167,7 @@ class WDKPublishPlugin implements Plugin<Project> {
                 .map { it.asFile.text }
         def ghPublishTask = project.tasks.named(GithubPublishPlugin.PUBLISH_TASK_NAME, GithubPublish) {
             it.dependsOn(releaseNotesTask)
-            it.from(upmArchive.map { it.allArtifacts.files })
+            it.from(upmArchive.map { it.allArtifacts.collect {it.file } })
             it.tagName.set(ghRepo.asTagName(currentVersion))
             it.releaseName.set(currentVersion)
             it.targetCommitish.set(branchName)
@@ -182,6 +186,17 @@ class WDKPublishPlugin implements Plugin<Project> {
     //this whole memoization pattern is to assure that for a given input, this log only runs once.
     Closure<?> logWarn = { it, String message ->
         project.logger.warn(message)
+        return it
+    }.memoize()
+
+
+    private <T> Closure<T> logInfo(Closure<String> logString) {
+        return { T it -> logInfo(it, logString(it)) }
+    }
+
+    //this whole memoization pattern is to assure that for a given input, this log only runs once.
+    Closure<?> logInfo = { it, String message ->
+        project.logger.info(message)
         return it
     }.memoize()
 }

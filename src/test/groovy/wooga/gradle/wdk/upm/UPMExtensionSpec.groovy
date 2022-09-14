@@ -3,12 +3,20 @@ package wooga.gradle.wdk.upm
 import nebula.test.ProjectSpec
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.ProjectConfigurationException
-import org.gradle.api.internal.project.DefaultProject
 import org.gradle.api.internal.provider.MissingValueException
-import org.gradle.api.publish.PublishingExtension
 import spock.lang.Unroll
+import wooga.gradle.wdk.tools.GradleTestUtils
+import wooga.gradle.wdk.upm.tools.UPMFixtures
 
 class UPMExtensionSpec extends ProjectSpec {
+
+    private GradleTestUtils utils
+    private UPMFixtures fixtures
+
+    def setup() {
+        this.utils = new GradleTestUtils(project)
+        this.fixtures = new UPMFixtures(utils)
+    }
 
     def "sets extension properties dependent on the publishing extension"() {
         given:
@@ -18,17 +26,10 @@ class UPMExtensionSpec extends ProjectSpec {
             it.repository = "test"
         }
         and:
-        def publishExt = project.extensions.getByType(PublishingExtension)
+        fixtures.configurePublish("$baseURL/$repositoryKey", "test")
+
         when:
-        publishExt.with {
-            repositories {
-                upm {
-                    url = "$baseURL/$repositoryKey"
-                    name = "test"
-                }
-            }
-        }
-        (project as DefaultProject).evaluate()
+        utils.evaluate(project)
 
         then:
         def ext = project.extensions.getByType(UPMExtension)
@@ -46,17 +47,11 @@ class UPMExtensionSpec extends ProjectSpec {
         given:
         project.plugins.apply(UPMPlugin)
         and:
-        def publishExt = project.extensions.getByType(PublishingExtension)
-        publishExt.with {
-            repositories {
-                upm {
-                    url = "https://artifactoryhost/artifactory/repository"
-                    name = "test"
-                }
-            }
-        }
+        fixtures.configurePublish("any")
+
         when:
-        (project as DefaultProject).evaluate()
+        utils.evaluate(project)
+
         then:
         def e = thrown(ProjectConfigurationException)
         e.cause instanceof MissingValueException
@@ -66,44 +61,31 @@ class UPMExtensionSpec extends ProjectSpec {
         given:
         project.plugins.apply(UPMPlugin)
         and:
-        def publishExt = project.extensions.getByType(PublishingExtension)
-        def upmExt = project.extensions.getByType(UPMExtension)
-        publishExt.with {
-            repositories {
-                upm {
-                    url = "https://artifactoryhost/artifactory/repository"
-                    name = "test"
-                }
-            }
-        }
+        fixtures.configurePublish("repo")
+        def upmExt = utils.requireExtension(UPMExtension)
         upmExt.repository = "otherRepo"
+
         when:
-        (project as DefaultProject).evaluate()
+        utils.evaluate(project)
+
         then:
         def e = thrown(ProjectConfigurationException)
         e.cause instanceof MissingValueException
     }
 
 
-    @Unroll("throws on project evaluation if selected repository is not valid #invalidURL")
-    def "throws on project evaluation if selected repository is not valid"() {
+    @Unroll("throws on project evaluation if selected repository url is not valid #invalidURL")
+    def "throws on project evaluation if selected repository url is not valid"() {
         given:
         project.plugins.apply(UPMPlugin)
         and:
-        def publishExt = project.extensions.getByType(PublishingExtension)
-        def upmExt = project.extensions.getByType(UPMExtension)
-        publishExt.with {
-            repositories {
-                upm {
-                    url = invalidURL
-                    name = "test"
-                }
-            }
-        }
-        upmExt.repository = "otherRepo"
+        fixtures.configurePublish(invalidURL, "test")
+        def upmExt = utils.requireExtension(UPMExtension)
+        upmExt.repository = "test"
 
         when:
-        (project as DefaultProject).evaluate()
+        utils.evaluate(project)
+
         then:
         def e = thrown(ProjectConfigurationException)
         e.cause instanceof InvalidUserDataException
@@ -120,7 +102,7 @@ class UPMExtensionSpec extends ProjectSpec {
         upmExt.repository = "repo"
 
         when:
-        (project as DefaultProject).evaluate()
+        utils.evaluate(project)
 
         then:
         def e = thrown(ProjectConfigurationException)

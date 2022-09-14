@@ -1,5 +1,6 @@
 package wooga.gradle.wdk.publish
 
+import com.wooga.gradle.test.GradleSpecUtils
 import com.wooga.spock.extensions.github.GithubRepository
 import com.wooga.spock.extensions.github.Repository
 import com.wooga.spock.extensions.github.api.RateLimitHandlerWait
@@ -12,10 +13,11 @@ import spock.lang.Shared
 import spock.lang.Unroll
 import wooga.gradle.github.publish.GithubPublishPlugin
 import wooga.gradle.release.ReleasePlugin
-import wooga.gradle.wdk.internal.GrGitExtended
+import wooga.gradle.wdk.tools.GrGitExtended
 import wooga.gradle.wdk.upm.UPMPlugin
 import wooga.gradle.wdk.upm.internal.BasicSnippetsTrait
 import wooga.gradle.wdk.upm.internal.GithubSnippetsTrait
+import wooga.gradle.wdk.upm.internal.UPMSnippets
 import wooga.gradle.wdk.upm.internal.UPMSnippetsTrait
 import wooga.gradle.wdk.upm.internal.UPMTestTools
 import wooga.gradle.wdk.upm.internal.UnitySnippetsTrait
@@ -72,7 +74,6 @@ class WDKPublishPluginIntegrationSpec extends WDKPublishIntegrationSpec
         then: "release task runs for release stages"
         result.wasSkipped("$WDKPublishPlugin.GITHUB_PUBLISH_TASK_NAME") == !shouldRelease
 
-        //Failing because this behavior isn't implemented yet. Shocking, I know.
         where:
         stage      | shouldRelease
         "rc"       | true
@@ -190,7 +191,7 @@ class WDKPublishPluginIntegrationSpec extends WDKPublishIntegrationSpec
         result.success
         result.wasExecuted(WDKPublishPlugin.GITHUB_RELEASE_NOTES_TASK_NAME)
         result.wasExecuted(WDKPublishPlugin.GITHUB_PUBLISH_TASK_NAME)
-        result.wasExecuted(UPMPlugin.GENERATE_UPM_PACKAGE_TASK_NAME)
+        result.wasExecuted(UPMSnippets.UPM_PROJECT_NAME+UPMPlugin.GENERATE_UPM_PACKAGE_TASK_SUFFIX)
         result.wasExecuted(ArtifactoryTask.DEPLOY_TASK_NAME)
         and:
         def gitRelease = testRepo.getReleaseByTagName(expectedGHTag)
@@ -204,7 +205,7 @@ class WDKPublishPluginIntegrationSpec extends WDKPublishIntegrationSpec
         expectedGHTag = "v${expectedVersion}"
     }
 
-    @Unroll("wdk version #semver2Version should be the same as the project version #semver1Version in the root project")
+    @Unroll("wdk version #semver2Version in subproject should be the same as the project version #semver1Version in the root project")
     def "wdk version should be the same as the project version in the root project, if its present"() {
         given: "a gradle subproject"
         def subprojDir = new File(projectDir, "subproject")
@@ -240,7 +241,7 @@ class WDKPublishPluginIntegrationSpec extends WDKPublishIntegrationSpec
             ${configureGithubPlugin(testRepo)}
             ${configureMockUnity(subprojDir)}
             ${mockTask(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME, """
-                logger.warn("upm package ver:|&|&\${upm.version.orNull}|&|&")
+                logger.warn("upm package ver:|&|&\${upm.projects.collect{it.version.orNull}}|&|&")
                 logger.warn("subproject vercode:|&|&\${project.versionCode}|&|&")
             """)}
         """
@@ -251,7 +252,7 @@ class WDKPublishPluginIntegrationSpec extends WDKPublishIntegrationSpec
         then:
         result.success
         result.standardOutput.contains("project ver:|&|&${semver1Version}|&|&")
-        result.standardOutput.contains("upm package ver:|&|&${semver2Version}|&|&")
+        result.standardOutput.contains("upm package ver:|&|&[${semver2Version}]|&|&")
         result.standardOutput.contains("project vercode:|&|&${versionCode}|&|&")
         result.standardOutput.contains("subproject vercode:|&|&${versionCode}|&|&")
         UPMTestTools.retry(60000, 10000, {it == 0}) {

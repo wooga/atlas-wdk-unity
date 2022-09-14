@@ -1,19 +1,16 @@
 package wooga.gradle.wdk.upm
 
 import com.wooga.gradle.PropertyLookup
+import com.wooga.gradle.PropertyUtils
+import wooga.gradle.wdk.DynamicPropertyLookup
 
 class UPMConventions {
 
     static final PropertyLookup repository = new FixPropertyLookup(
             ["UPM_REPOSITORY"],
             ["upm.repository", "publish.repository"],
-            null)
-
-    static final PropertyLookup version = new FixPropertyLookup(
-            ["UPM_PACKAGE_VERSION", "UPM_VERSION"],
-            ["upm.version", "upm.package.version", "publish.version"],
-            null)
-
+            null
+    )
 
     static final PropertyLookup username = new FixPropertyLookup(
             ["UPM_USR", "UPM_USERNAME"],
@@ -27,15 +24,28 @@ class UPMConventions {
             null
     )
 
-    static final PropertyLookup packageDirectory = new FixPropertyLookup(
-            ["UPM_PACKAGE_DIR", "UPM_PACKAGE_DIRECTORY"],
-            ["upm.package.directory"],
-            null
+    static final DynamicPropertyLookup<String> version = new DynamicPropertyLookup<>(
+            { ["UPM_${PropertyUtils.envNameFromProperty(it)}_PACKAGE_VERSION" , "UPM_${PropertyUtils.envNameFromProperty(it)}_VERSION",
+                              "UPM_PACKAGE_VERSION" , "UPM_VERSION"] },
+            { ["upm.${it}.version" , "upm.${it}.package.version", "${it}.publish.version",
+                            "upm.version" , "upm.package.version", "publish.version"] },
+            { null }
     )
 
-    static final PropertyLookup generateMetaFiles = new FixPropertyLookup(
-            ["UPM_GENERATE_METAFILES", "UPM_GENERATE_META_FILES"],
-            ["upm.generate.metafiles"],
-            false
+
+    static final DynamicPropertyLookup<String> packageDirectory = new DynamicPropertyLookup<>(
+            { ["UPM_${PropertyUtils.envNameFromProperty(it)}_PACKAGE_DIR", "UPM_${PropertyUtils.envNameFromProperty(it)}_PACKAGE_DIRECTORY",
+                              "UPM_PACKAGE_DIR", "UPM_PACKAGE_DIRECTORY"] },
+            { ["upm.${it}.package.directory",
+                           "upm.package.directory"] },
+            { null }
+    )
+
+    static final DynamicPropertyLookup<String> generateMetaFiles = new DynamicPropertyLookup<>(
+            { ["UPM_${PropertyUtils.envNameFromProperty(it)}_GENERATE_METAFILES" , "UPM_${PropertyUtils.envNameFromProperty(it)}_GENERATE_META_FILES",
+                              "UPM_GENERATE_METAFILES" , "UPM_GENERATE_META_FILES"] },
+            { ["upm.${it}.generate.metafiles",
+                           "upm.generate.metafiles"] },
+            { false }
     )
 }

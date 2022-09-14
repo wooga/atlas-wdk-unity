@@ -74,9 +74,6 @@ class WdkUnityPlugin implements Plugin<Project> {
     static String WEBGL_RESOURCES_CONFIGURATION_NAME = "webgl"
     static String RUNTIME_CONFIGURATION_NAME = "runtime"
 
-    private static String GENERATE_UPM_PACKAGE_TASK_NAME = "upmPack"
-    private static String GENERATE_META_FILES_TASK_NAME = "generateMetaFiles"
-
     static String PERFORM_TEST_BUILD_TASK_NAME = "performTestBuild"
     static String CLEAN_TEST_BUILD_TASK_NAME = "cleanTestBuild"
     static String MOVE_EDITOR_DEPENDENCIES = "moveEditorDependencies"

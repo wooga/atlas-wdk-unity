@@ -1,4 +1,4 @@
-package wooga.gradle.wdk.internal
+package wooga.gradle.wdk.tools
 
 import com.wooga.spock.extensions.github.Repository
 import org.ajoberstar.grgit.Credentials

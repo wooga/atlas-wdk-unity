@@ -1,4 +1,4 @@
-package wooga.gradle.wdk.publish.internal
+package wooga.gradle.wdk.tools
 
 import org.gradle.api.Project
 import org.gradle.api.internal.project.DefaultProject
@@ -20,11 +20,17 @@ class GradleTestUtils {
         return project.extensions.getByType(tClass)
     }
 
+    public <T> T evaluate(@DelegatesTo(Project) Closure<T> cls) {
+        def result = cls(project)
+        evaluate(project)
+        return result
+    }
+
     public void evaluate(Project project) {
         ((DefaultProject)project).evaluate()
     }
 
-    Project createSubproject(String name = "subproject") {
+    public Project createSubproject(String name = "subproject") {
         def projDir = new File(project.projectDir, name)
         projDir.mkdirs()
         return ProjectBuilder.builder()
