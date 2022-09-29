@@ -60,7 +60,7 @@ dependencies {
     implementation "commons-io:commons-io:2.11.0"
     implementation 'com.wooga.gradle:gradle-commons:[1,2['
 
-    implementation "org.jfrog.buildinfo:build-info-extractor-gradle:4.29.0"
+    implementation "org.jfrog.buildinfo:build-info-extractor-gradle:4.29.1"
 
     testImplementation 'com.wooga.gradle:gradle-commons-test:[1,2)'
     testImplementation('org.jfrog.artifactory.client:artifactory-java-client-services:[2,3)') {
