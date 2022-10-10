@@ -1,6 +1,6 @@
 package wooga.gradle.wdk.unity
 
-import org.gradle.api.DefaultTask
+
 import org.gradle.api.file.Directory
 import org.jfrog.artifactory.client.Artifactory
 import org.jfrog.artifactory.client.ArtifactoryClientBuilder
@@ -50,10 +50,10 @@ class PublishWdkUnityIntegrationSpec extends IntegrationSpec {
         assert artifactoryCredentials
         def credentials = artifactoryCredentials.split(':')
         artifactory = ArtifactoryClientBuilder.create()
-            .setUrl(artifactoryUrl)
-            .setUsername(credentials[0])
-            .setPassword(credentials[1])
-            .build()
+                .setUrl(artifactoryUrl)
+                .setUsername(credentials[0])
+                .setPassword(credentials[1])
+                .build()
     }
 
     def cleanup() {
@@ -62,9 +62,9 @@ class PublishWdkUnityIntegrationSpec extends IntegrationSpec {
 
     def cleanupArtifactory(String repoName, String artifactName) {
         List<RepoPath> searchItems = artifactory.searches()
-            .repositories(repoName)
-            .artifactsByName(artifactName)
-            .doSearch()
+                .repositories(repoName)
+                .artifactsByName(artifactName)
+                .doSearch()
 
         for (RepoPath searchItem : searchItems) {
             String repoKey = searchItem.getRepoKey()
@@ -75,11 +75,11 @@ class PublishWdkUnityIntegrationSpec extends IntegrationSpec {
 
     def hasPackageOnArtifactory(String repoName, String artifactName) {
         List<RepoPath> packages = artifactory.searches()
-            .repositories(repoName)
-            .artifactsByName(artifactName)
-            .doSearch()
+                .repositories(repoName)
+                .artifactsByName(artifactName)
+                .doSearch()
 
-        assert packages.size() == 1 : "Could not find artifact `${artifactName}` on repository ${repoName}"
+        assert packages.size() == 1: "Could not find artifact `${artifactName}` on repository ${repoName}"
         true
     }
 
@@ -98,33 +98,33 @@ class PublishWdkUnityIntegrationSpec extends IntegrationSpec {
         def userName = repositoryCredentials.split(":").first()
         def password = repositoryCredentials.split(":").last()
         buildFile << """
-wdk {
-generateMetaFiles.set(false)
-}
+            wdk {
+            generateMetaFiles.set(false)
+            }
 
-artifactory {
-    contextUrl = "https://wooga.jfrog.io/artifactory/"
-    publish {
-        repository {
-            repoKey = ${wrapValueBasedOnType(artifactoryRepoName, String)}
-            username = ${wrapValueBasedOnType(userName, String)}
-            password = ${wrapValueBasedOnType(password, String)}
-        }
-    }
-}
-"""
+            artifactory {
+                contextUrl = "https://wooga.jfrog.io/artifactory/"
+                publish {
+                    repository {
+                        repoKey = ${wrapValueBasedOnType(artifactoryRepoName, String)}
+                        username = ${wrapValueBasedOnType(userName, String)}
+                        password = ${wrapValueBasedOnType(password, String)}
+                    }
+                }
+            }
+            """.stripIndent()
 
         and: "configuration of the task to generate the package"
         buildFile << """
-upmPack {
-packageDirectory.set(${wrapValueBasedOnType(packageTitle, Directory)})
-packageName = ${wrapValueBasedOnType(packageName, String)}
-archiveVersion.set(${wrapValueBasedOnType(packageVersion, String)})
-}
-"""
+            upmPack {
+                packageDirectory.set(${wrapValueBasedOnType(packageTitle, Directory)})
+                packageName = ${wrapValueBasedOnType(packageName, String)}
+                archiveVersion.set(${wrapValueBasedOnType(packageVersion, String)})
+            }
+            """.stripIndent()
 
         when:
-        def result = runTasksSuccessfully(WdkUnityPlugin.GENERATE_UPM_PACKAGE_TASK_NAME, "publish")
+        def result = runTasksSuccessfully("publish")
 
         then:
         result.success
@@ -144,11 +144,11 @@ archiveVersion.set(${wrapValueBasedOnType(packageVersion, String)})
         given: "configuration of the main plugin"
         directory("Foobar")
         buildFile << """
-wdk {
-packageDirectory.set(${wrapValueBasedOnType("Foobar", Directory)})
-generateMetaFiles.set(${wrapValueBasedOnType(generateMetaFiles, Boolean)})
-}
-"""
+            wdk {
+                packageDirectory.set(${wrapValueBasedOnType("Foobar", Directory)})
+                generateMetaFiles.set(${wrapValueBasedOnType(generateMetaFiles, Boolean)})
+            }
+            """.stripIndent()
         when:
         def result = runTasksSuccessfully(WdkUnityPlugin.GENERATE_UPM_PACKAGE_TASK_NAME, "--dry-run")
 
@@ -159,6 +159,22 @@ generateMetaFiles.set(${wrapValueBasedOnType(generateMetaFiles, Boolean)})
         generateMetaFiles | present
         true              | true
         false             | false
+    }
+
+    def "publish does nothing if no upm packageDirectory is set"() {
+        when:
+        def result = runTasksSuccessfully("publish")
+
+        then:
+        !result.wasExecuted(WdkUnityPlugin.GENERATE_UPM_PACKAGE_TASK_NAME)
+    }
+
+    def "artifactory publish will fail if no upm packageDirectory is set"() {
+        when:
+        def result = runTasksWithFailure("artifactoryPublish")
+
+        then:
+        result.standardError.contains("Invalid publication 'upm': artifact file does not exist")
     }
 
     File writeTestPackage(String packageDirectory, String packageName) {
