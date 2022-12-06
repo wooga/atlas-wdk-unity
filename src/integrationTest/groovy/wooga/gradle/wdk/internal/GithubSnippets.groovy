@@ -1,4 +1,4 @@
-package wooga.gradle.wdk.upm.internal
+package wooga.gradle.wdk.internal
 
 import com.wooga.spock.extensions.github.Repository
 

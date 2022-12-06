@@ -14,6 +14,8 @@ import wooga.gradle.github.publish.GithubPublishPlugin
 import wooga.gradle.github.publish.tasks.GithubPublish
 import wooga.gradle.githubReleaseNotes.GithubReleaseNotesPlugin
 import wooga.gradle.githubReleaseNotes.tasks.GenerateReleaseNotes
+import wooga.gradle.upm.artifactory.UPMArtifactoryExtension
+import wooga.gradle.upm.artifactory.UPMArtifactoryPlugin
 import wooga.gradle.version.ReleaseStage
 import wooga.gradle.version.VersionCodeScheme
 import wooga.gradle.version.VersionPlugin
@@ -23,8 +25,6 @@ import wooga.gradle.version.internal.release.base.ReleaseVersion
 import wooga.gradle.wdk.publish.internal.Git
 import wooga.gradle.wdk.publish.internal.GithubRepository
 import wooga.gradle.wdk.publish.internal.releasenotes.ReleaseNotesBodyStrategy
-import wooga.gradle.wdk.upm.UPMExtension
-import wooga.gradle.wdk.upm.UPMPlugin
 
 
 class WDKPublishPlugin implements Plugin<Project> {
@@ -67,7 +67,7 @@ class WDKPublishPlugin implements Plugin<Project> {
         //project.apply only runs the actual plugin apply() in the first time its called, so don't worry about that.
         project.plugins.apply(GrgitPlugin)
         project.plugins.apply(PublishingPlugin)
-        project.plugins.apply(UPMPlugin)
+        project.plugins.apply(UPMArtifactoryPlugin)
         project.rootProject.plugins.apply(VersionPlugin)
         project.plugins.apply(GithubPublishPlugin)
         project.plugins.apply(GithubReleaseNotesPlugin)
@@ -90,9 +90,9 @@ class WDKPublishPlugin implements Plugin<Project> {
         configurePublish(ghPublish)
     }
 
-    UPMExtension configureUPM(Provider<String> releaseStage, Provider<ReleaseVersion> version) {
+    UPMArtifactoryExtension configureUPM(Provider<String> releaseStage, Provider<ReleaseVersion> version) {
 
-        def upmExt = project.extensions.findByType(UPMExtension).with { upm ->
+        def upmExt = project.extensions.findByType(UPMArtifactoryExtension).with { upm ->
             upm.projects.configureEach { upmProject ->
                 upmProject.version.convention(version.map {it.version }
                                                      .map(logInfo{ String versionStr -> "setting UPM project ${upmProject.name} version as ${versionStr}" })
@@ -120,7 +120,7 @@ class WDKPublishPlugin implements Plugin<Project> {
 
     NamedDomainObjectProvider<Configuration> createArchiveConfiguration(String configName) {
         def archive = project.configurations.register(configName) {
-            def upmArchiveConfig = project.configurations.getByName(UPMPlugin.ROOT_ARCHIVE_CONFIGURATION_NAME)
+            def upmArchiveConfig = project.configurations.getByName(UPMArtifactoryPlugin.ROOT_ARCHIVE_CONFIGURATION_NAME)
             it.extendsFrom(upmArchiveConfig)
         }
         return archive

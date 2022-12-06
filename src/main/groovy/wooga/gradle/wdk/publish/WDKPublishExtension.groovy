@@ -1,8 +1,8 @@
 package wooga.gradle.wdk.publish
 
 import org.gradle.api.Project
+import wooga.gradle.upm.artifactory.internal.Extensions
 import wooga.gradle.wdk.publish.traits.WDKPublishSpec
-import wooga.gradle.wdk.upm.internal.Extensions
 
 
 class WDKPublishExtension implements WDKPublishSpec {
@@ -11,10 +11,11 @@ class WDKPublishExtension implements WDKPublishSpec {
         def extension = project.extensions.create(extName, WDKPublishExtension)
         Extensions.setPropertiesOwner(WDKPublishExtension, extension, extName)
         def defaultReleaseNotesFile = project.layout.buildDirectory.file("outputs/release-notes.md")
-        extension.with {
-            releaseNotesFile.convention(
-                    WDKPublishConvention.releaseNotesFile.getFileValueProvider(project).orElse(defaultReleaseNotesFile))
-        }
+
+        extension.releaseNotesFile.convention(
+                WDKPublishConvention.releaseNotesFile
+                .getFileValueProvider(project,null, project.provider { project.layout.projectDirectory })
+                .orElse(defaultReleaseNotesFile))
         return extension
     }
 

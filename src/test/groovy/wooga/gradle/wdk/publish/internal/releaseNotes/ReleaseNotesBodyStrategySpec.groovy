@@ -22,8 +22,6 @@ import org.kohsuke.github.GHCommit
 import org.kohsuke.github.GHPullRequest
 import wooga.gradle.wdk.publish.internal.releasenotes.ReleaseNotesBodyStrategy
 
-import java.util.stream.Collectors
-
 class ReleaseNotesBodyStrategySpec extends ReleaseNotesStrategySpec<ReleaseNotesBodyStrategy> {
 
     @Override

@@ -1,9 +1,6 @@
-package wooga.gradle.wdk.upm.internal
+package wooga.gradle.wdk.internal
 
-import static com.wooga.gradle.test.PropertyUtils.wrapValueBasedOnType
-import static com.wooga.gradle.test.PropertyUtils.wrapValueBasedOnType
-import static com.wooga.gradle.test.PropertyUtils.wrapValueBasedOnType
-import static com.wooga.gradle.test.PropertyUtils.wrapValueBasedOnType
+
 import static com.wooga.gradle.test.PropertyUtils.wrapValueBasedOnType
 
 class UPMSnippets implements UPMSnippetsTrait {
@@ -16,9 +13,6 @@ trait UPMSnippetsTrait {
     static final String DEFAULT_REPOSITORY = "integration"
     static final String UPM_PROJECT_NAME = "defaultProj"
 
-    static String minimalUPMConfiguration(File baseDir, boolean publishing) {
-        return minimalUPMConfiguration(baseDir, DEFAULT_PACKAGE_NAME, DEFAULT_REPOSITORY, publishing)
-    }
 
     static String minimalUPMConfiguration(File baseDir = null, String packageName = DEFAULT_PACKAGE_NAME, String repoName = DEFAULT_REPOSITORY, boolean publishing = false) {
         def upmTestTools = new UPMTestTools()

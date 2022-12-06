@@ -273,26 +273,5 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         true  | false          | false | "missing manifest file"
         false | true           | false | "not set"
     }
-
-    def "upm pack is skipped if no package json is set"() {
-        given:
-        buildFile << """ unity {
-        unityPath = file(${wrapValueBasedOnType(File.createTempFile("foo", "bar"), String)})
-        }"""
-
-        when:
-        def result = runTasks(upmTaskName)
-
-        then:
-        result.wasSkipped(upmTaskName)
-        result.wasSkipped(generateMetaFilesTaskName)
-
-        where:
-        upmTaskName = "upmPack"
-        generateMetaFilesTaskName = "generateMetaFiles"
-    }
-
-
-
 }
 

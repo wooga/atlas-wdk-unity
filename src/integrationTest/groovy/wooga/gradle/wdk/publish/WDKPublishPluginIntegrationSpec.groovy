@@ -1,6 +1,5 @@
 package wooga.gradle.wdk.publish
 
-import com.wooga.gradle.test.GradleSpecUtils
 import com.wooga.spock.extensions.github.GithubRepository
 import com.wooga.spock.extensions.github.Repository
 import com.wooga.spock.extensions.github.api.RateLimitHandlerWait
@@ -13,14 +12,9 @@ import spock.lang.Shared
 import spock.lang.Unroll
 import wooga.gradle.github.publish.GithubPublishPlugin
 import wooga.gradle.release.ReleasePlugin
+import wooga.gradle.upm.artifactory.UPMArtifactoryPlugin
+import wooga.gradle.wdk.internal.*
 import wooga.gradle.wdk.tools.GrGitExtended
-import wooga.gradle.wdk.upm.UPMPlugin
-import wooga.gradle.wdk.upm.internal.BasicSnippetsTrait
-import wooga.gradle.wdk.upm.internal.GithubSnippetsTrait
-import wooga.gradle.wdk.upm.internal.UPMSnippets
-import wooga.gradle.wdk.upm.internal.UPMSnippetsTrait
-import wooga.gradle.wdk.upm.internal.UPMTestTools
-import wooga.gradle.wdk.upm.internal.UnitySnippetsTrait
 
 class WDKPublishPluginIntegrationSpec extends WDKPublishIntegrationSpec
         implements GithubSnippetsTrait, UnitySnippetsTrait, BasicSnippetsTrait, UPMSnippetsTrait {
@@ -191,7 +185,7 @@ class WDKPublishPluginIntegrationSpec extends WDKPublishIntegrationSpec
         result.success
         result.wasExecuted(WDKPublishPlugin.GITHUB_RELEASE_NOTES_TASK_NAME)
         result.wasExecuted(WDKPublishPlugin.GITHUB_PUBLISH_TASK_NAME)
-        result.wasExecuted(UPMSnippets.UPM_PROJECT_NAME+UPMPlugin.GENERATE_UPM_PACKAGE_TASK_SUFFIX)
+        result.wasExecuted(UPMSnippets.UPM_PROJECT_NAME + UPMArtifactoryPlugin.GENERATE_UPM_PACKAGE_TASK_SUFFIX)
         result.wasExecuted(ArtifactoryTask.DEPLOY_TASK_NAME)
         and:
         def gitRelease = testRepo.getReleaseByTagName(expectedGHTag)

@@ -6,15 +6,15 @@ import spock.lang.Unroll
 import wooga.gradle.github.publish.GithubPublishPlugin
 import wooga.gradle.github.publish.tasks.GithubPublish
 import wooga.gradle.githubReleaseNotes.tasks.GenerateReleaseNotes
+import wooga.gradle.upm.artifactory.UPMArtifactoryExtension
+import wooga.gradle.upm.artifactory.UPMArtifactoryPlugin
 import wooga.gradle.version.VersionCodeScheme
 import wooga.gradle.version.VersionPluginExtension
 import wooga.gradle.version.VersionScheme
-import wooga.gradle.wdk.publish.tools.BaseGradleSpec
 import wooga.gradle.wdk.publish.internal.releasenotes.ReleaseNotesBodyStrategy
+import wooga.gradle.wdk.publish.tools.BaseGradleSpec
 import wooga.gradle.wdk.tools.GrGitExtended
 import wooga.gradle.wdk.tools.GradleTestUtils
-import wooga.gradle.wdk.upm.UPMExtension
-import wooga.gradle.wdk.upm.UPMPlugin
 
 class WDKPublishPluginSpec extends BaseGradleSpec {
 
@@ -47,13 +47,13 @@ class WDKPublishPluginSpec extends BaseGradleSpec {
             it.versionScheme = versionScheme
         }
         and: "upm plugin configured with some project"
-        utils.requireExtension(UPMExtension).projects {
+        utils.requireExtension(UPMArtifactoryExtension).projects {
             it.create("sample")
             it.create("otherSample")
         }
 
         then:
-        def upmExt = utils.requireExtension(UPMExtension)
+        def upmExt = utils.requireExtension(UPMArtifactoryExtension)
         project.version.toString() == expectedVersion
         upmExt.projects.each {it.version.get() == expectedVersion }
         upmExt.repository.get() == releaseStage
@@ -72,7 +72,7 @@ class WDKPublishPluginSpec extends BaseGradleSpec {
     @Unroll("configures upm extension version as #semver2Version when version plugin version scheme is #versionScheme")
     def "configures upm extension version always as semver2 when not in root project"() {
         given:
-        def subproject = utils.createSubproject("subproject")
+        def subproject = addSubproject("subproject")
         def subProjUtils = new GradleTestUtils(subproject)
         project.ext["release.scope"] = releaseScope
         project.ext["release.stage"] = releaseStage
@@ -87,13 +87,13 @@ class WDKPublishPluginSpec extends BaseGradleSpec {
             it.versionScheme = versionScheme
         }
         and: "upm plugin configured with some project"
-        subProjUtils.requireExtension(UPMExtension).projects {
+        subProjUtils.requireExtension(UPMArtifactoryExtension).projects {
             it.create("sample")
             it.create("otherSample")
         }
 
         then:
-        def upmExt = subProjUtils.requireExtension(UPMExtension)
+        def upmExt = subProjUtils.requireExtension(UPMArtifactoryExtension)
         upmExt.projects.each {
             it.version.get() == semver2Version
         }
@@ -112,7 +112,7 @@ class WDKPublishPluginSpec extends BaseGradleSpec {
     @Unroll("configures upm extension version as #semver2Version when version plugin version is set as #versionScheme-#releaseStage-#releaseScope")
     def "configures upm extension version as #semver2Version when version plugin version is set as #versionScheme-#releaseStage-#releaseScope"() {
         given:
-        def subproject = utils.createSubproject("subproject")
+        def subproject = addSubprojectWithDirectory("subproject")
         def subProjUtils = new GradleTestUtils(subproject)
         project.ext["release.scope"] = releaseScope
         project.ext["release.stage"] = releaseStage
@@ -127,13 +127,13 @@ class WDKPublishPluginSpec extends BaseGradleSpec {
             it.versionScheme = versionScheme
         }
         and: "upm plugin configured with some project"
-        subProjUtils.requireExtension(UPMExtension).projects {
+        subProjUtils.requireExtension(UPMArtifactoryExtension).projects {
             it.create("sample")
             it.create("otherSample")
         }
 
         then:
-        def upmExt = subProjUtils.requireExtension(UPMExtension)
+        def upmExt = subProjUtils.requireExtension(UPMArtifactoryExtension)
         project.version.toString() == baseVersion
         subproject.version.toString() == baseVersion
         upmExt.projects.each {
@@ -255,7 +255,7 @@ class WDKPublishPluginSpec extends BaseGradleSpec {
         project.plugins.apply(WDKPublishPlugin)
 
         then:
-        def upmArchiveConfig = project.configurations.getByName(UPMPlugin.ROOT_ARCHIVE_CONFIGURATION_NAME)
+        def upmArchiveConfig = project.configurations.getByName(UPMArtifactoryPlugin.ROOT_ARCHIVE_CONFIGURATION_NAME)
         def archiveCfg = project.configurations.getByName(configName)
         archiveCfg.extendsFrom.contains(upmArchiveConfig)
 

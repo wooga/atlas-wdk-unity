@@ -105,11 +105,14 @@ abstract class WdkPluginExtension {
         editorDependeciesToMoveDuringTestBuild.addAll(dependencies)
     }
 
+    @Deprecated
     private final DirectoryProperty packageDirectory = objects.directoryProperty()
     /**
+     * Deprecated, please use the upm extension (atlas-upm-artifactory plugin) instead.
      * @return The directory where the UPM package sources of the WDK are located.
      * At its root, it must contain a package manifest file (package.json) file.
      */
+    @Deprecated
     DirectoryProperty getPackageDirectory() {
         packageDirectory
     }

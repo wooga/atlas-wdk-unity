@@ -1,4 +1,4 @@
-package wooga.gradle.wdk.upm.internal
+package wooga.gradle.wdk.internal
 
 import org.apache.commons.lang3.RandomStringUtils
 import org.apache.http.client.HttpResponseException
@@ -9,9 +9,6 @@ import wooga.gradle.unity.utils.PackageManifestBuilder
 
 import java.util.stream.IntStream
 
-
-//TODO: test this task and see why it gets stuck
-//https://jenkins.atlas.wooga.com/blue/organizations/jenkins/wdk_unity%2Fwdk-unity-AsyncAwait/detail/PR-48/1/pipeline
 class UPMTestTools {
 
     static final String WOOGA_ARTIFACTORY_BASE_URL = "https://wooga.jfrog.io/wooga"

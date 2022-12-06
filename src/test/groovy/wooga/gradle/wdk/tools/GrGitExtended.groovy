@@ -44,11 +44,11 @@ class GrGitExtended extends Grgit {
             if(it.exists()) {
                 it.createNewFile()
             }
-            text = ["subproject/"].join("\n")
+            it.text = ["subproject/"].join("\n")
             return it
         }
-        add(patterns: ['anyfile'])
-        commit(message: message)
+        this.add(patterns: ['anyfile'])
+        this.commit(message: message)
         return changedFile
     }
 }

@@ -1,4 +1,4 @@
-package wooga.gradle.wdk.upm.internal
+package wooga.gradle.wdk.internal
 
 import com.wooga.gradle.test.executable.FakeExecutables
 import org.gradle.api.file.RegularFile
