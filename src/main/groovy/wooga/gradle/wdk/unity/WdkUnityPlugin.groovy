@@ -180,28 +180,28 @@ class WdkUnityPlugin implements Plugin<Project> {
         Configuration webglResources = project.configurations[WEBGL_RESOURCES_CONFIGURATION_NAME]
 
         def iOSResourceCopy = project.tasks.register("assembleIOSResources", DefaultResourceCopyTask,
-                { t ->
-                    t.description = "gathers all additional iOS files into the Plugins/iOS directory of the unity project"
-                    t.dependsOn(iOSResources)
-                    t.resources = iOSResources
-                    t.doLast(new IOSResourceCopyAction())
-                })
+            { t ->
+                t.description = "gathers all additional iOS files into the Plugins/iOS directory of the unity project"
+                t.dependsOn(iOSResources)
+                t.resources = iOSResources
+                t.doLast(new IOSResourceCopyAction())
+            })
 
         def androidResourceCopy = project.tasks.register("assembleAndroidResources", DefaultResourceCopyTask,
-                { t ->
-                    t.description = "gathers all *.jar and AndroidManifest.xml files into the Plugins/Android directory of the unity project"
-                    t.dependsOn(androidResources)
-                    t.resources androidResources
-                    t.doLast(new AndroidResourceCopyAction())
-                })
+            { t ->
+                t.description = "gathers all *.jar and AndroidManifest.xml files into the Plugins/Android directory of the unity project"
+                t.dependsOn(androidResources)
+                t.resources androidResources
+                t.doLast(new AndroidResourceCopyAction())
+            })
 
         def webglResourceCopy = project.tasks.register("assembleWebGLResources", DefaultResourceCopyTask,
-                { t ->
-                    t.description = "gathers all webgl related files into the Plugins/webGL directory of the unity project"
-                    t.dependsOn(webglResources)
-                    t.resources webglResources
-                    t.doLast(new WebGLResourceCopyAction())
-                })
+            { t ->
+                t.description = "gathers all webgl related files into the Plugins/webGL directory of the unity project"
+                t.dependsOn(webglResources)
+                t.resources webglResources
+                t.doLast(new WebGLResourceCopyAction())
+            })
 
         def assembleTask = project.tasks[ASSEMBLE_RESOURCES_TASK_NAME]
         assembleTask.dependsOn iOSResourceCopy, androidResourceCopy, webglResourceCopy
@@ -382,12 +382,14 @@ class WdkUnityPlugin implements Plugin<Project> {
             defaultTask.publishIvy = false
         })
 
-        project.afterEvaluate {
-            def publishTask = project.tasks.getByName(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME)
-            if(upmPack.get().onlyIf.isSatisfiedBy(upmPack.get())) {
-                def artifactoryPublishTask = project.tasks.named("artifactoryPublish")
-                publishTask.dependsOn(artifactoryPublishTask)
-            }
+        // Configure the publishing task dependencies
+        def artifactoryPublishTask = project.tasks.getByName("artifactoryPublish")
+        def publishTask = project.tasks.getByName(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME)
+        publishTask.dependsOn(artifactoryPublishTask)
+
+        if (project.rootProject != project) {
+            def rootPublishTask = project.rootProject.tasks.getByName(PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME)
+            rootPublishTask.dependsOn(publishTask)
         }
     }
 
@@ -400,7 +402,7 @@ class WdkUnityPlugin implements Plugin<Project> {
                 // Search for a directory that contains a package.json file
                 def tree = woogaDir.asFileTree
                 def manifestFiles = tree.filter({ File file -> file.name == "package.json" })
-                switch (manifestFiles.size()) {
+                switch (manifestFiles.size()){
                     case 1:
                         def manifest = manifestFiles.first()
                         result = woogaDir.dir(manifest.parentFile.path)
@@ -417,6 +419,6 @@ class WdkUnityPlugin implements Plugin<Project> {
                 logger.warn("Could not deduce the package directory for this wdk")
             }
             result
-        }.memoize())
+        })
     }
 }
