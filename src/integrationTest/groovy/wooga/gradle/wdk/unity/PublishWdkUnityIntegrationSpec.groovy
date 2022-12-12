@@ -1,6 +1,6 @@
 package wooga.gradle.wdk.unity
 
-import org.gradle.api.DefaultTask
+
 import org.gradle.api.file.Directory
 import org.jfrog.artifactory.client.Artifactory
 import org.jfrog.artifactory.client.ArtifactoryClientBuilder
@@ -9,7 +9,7 @@ import spock.lang.Shared
 import spock.lang.Unroll
 import wooga.gradle.unity.utils.PackageManifestBuilder
 
-class PublishWdkUnityIntegrationSpec extends IntegrationSpec {
+class PublishWdkUnityIntegrationSpec extends com.wooga.gradle.test.IntegrationSpec {
 
     @Shared
     def packageTitle = "UpmTestPackage"
