@@ -24,7 +24,4 @@ class WdkUnityPluginConventions {
     static String WEBGL_PLUGIN_DIRECTORY = "WebGL"
     static String PAKET_UNITY_3D_INSTALL_DIRECTORY = "Paket.Unity3D"
 
-    static String upmConfigurationName = "upm"
-    static String upmPublicationName = "upm"
-
 }
