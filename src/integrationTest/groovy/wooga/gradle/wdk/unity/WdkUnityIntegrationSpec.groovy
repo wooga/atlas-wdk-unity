@@ -18,6 +18,7 @@
 package wooga.gradle.wdk.unity
 
 import spock.lang.Unroll
+import wooga.gradle.unity.UnityTask
 
 class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
 
@@ -75,6 +76,7 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "IOS"     | "-executeMethod Wooga.Atlas.BuildTools.BuildFromEditor.BuildTestIOS"
         WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "WebGL"   | "-executeMethod Wooga.Atlas.BuildTools.BuildFromEditor.BuildTestWebGL"
         WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME               | "-executeMethod Wooga.Atlas.BuildTools.BuildFromEditor.BuildTestClean"
+        WdkUnityPlugin.RESOLVE_PACKAGES_TASK_NAME               | "-batchmode"
     }
 
     @Unroll
@@ -145,11 +147,11 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
         then:
         def stdOut = result.standardOutput.substring(result.standardOutput.indexOf("Tasks to be executed:"))
         dependencies.every { stdOut.contains(it) }
-        dependencies.collect{stdOut.indexOf(it)}.max() < stdOut.indexOf(task)
+        dependencies.collect { stdOut.indexOf(it) }.max() < stdOut.indexOf(task)
 
 
         where:
-        task            | dependencies
+        task             | dependencies
         ":sonarqube"     | [":test", ":sonarBuildWDK"]
         ":sonarBuildWDK" | [":generateSolution"]
     }
@@ -237,5 +239,31 @@ class WdkUnityIntegrationSpec extends UnityIntegrationSpec {
 
         expect:
         runTasksWithFailure(WdkUnityPlugin.MOVE_EDITOR_DEPENDENCIES)
+    }
+
+    def "resolves packages is called when setup is called by itself"() {
+
+        when:
+        def result = runTasksSuccessfully(WdkUnityPlugin.SETUP_TASK_NAME)
+
+        then:
+        result.wasExecuted(WdkUnityPlugin.SETUP_TASK_NAME)
+        result.wasExecuted("resolvePackages")
+    }
+
+    def "resolves packages is skipped when setup is called with other unity tasks"() {
+
+        given:
+        addTask(taskName, UnityTask, true)
+
+        when:
+        def result = runTasksSuccessfully(taskName)
+
+        then:
+        result.wasExecuted(WdkUnityPlugin.SETUP_TASK_NAME)
+        result.wasSkipped("resolvePackages")
+
+        where:
+        taskName = "hasslicheKatzen"
     }
 }

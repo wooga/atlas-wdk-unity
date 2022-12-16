@@ -17,7 +17,7 @@
 
 package wooga.gradle.wdk.unity
 
-class IntegrationSpec extends nebula.test.IntegrationSpec {
+class IntegrationSpec extends com.wooga.gradle.test.IntegrationSpec  {
 
     def setup() {
         def gradleVersion = System.getenv("GRADLE_VERSION")

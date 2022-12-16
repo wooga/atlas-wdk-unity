@@ -23,7 +23,7 @@ import spock.lang.Unroll
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-class AssembleResourcesIntegrationSpec extends IntegrationSpec {
+class AssembleResourcesIntegrationSpec extends UnityIntegrationSpec {
 
     File iOSResourcebase
     File androidResourcebase

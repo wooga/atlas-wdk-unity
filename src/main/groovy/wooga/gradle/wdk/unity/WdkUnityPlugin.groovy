@@ -38,7 +38,8 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin
 import wooga.gradle.unity.UnityPlugin
 import wooga.gradle.unity.UnityPluginExtension
 import wooga.gradle.unity.UnityTask
-import wooga.gradle.unity.models.BuildTarget
+import wooga.gradle.unity.tasks.Activate
+import wooga.gradle.unity.tasks.ReturnLicense
 import wooga.gradle.unity.tasks.Unity
 import wooga.gradle.wdk.unity.actions.AndroidResourceCopyAction
 import wooga.gradle.wdk.unity.config.SonarQubeConfiguration
@@ -47,30 +48,32 @@ import wooga.gradle.wdk.unity.actions.IOSResourceCopyAction
 import wooga.gradle.wdk.unity.actions.WebGLResourceCopyAction
 
 import javax.inject.Inject
-import java.util.concurrent.Callable
 
 class WdkUnityPlugin implements Plugin<Project> {
 
     static Logger logger = Logging.getLogger(WdkUnityPlugin)
+
+    static String EXTENSION_NAME = "wdk"
+    static String GROUP = "wdk"
 
     static String ASSEMBLE_RESOURCES_TASK_NAME = "assembleResources"
     static String ASSEMBLE_IOS_RESOURCES_TASK_NAME = "assembleIOSResources"
     static String ASSEMBLE_ANDROID_RESOURCES_TASK_NAME = "assembleAndroidResources"
     static String ASSEMBLE_WEBGL_RESOURCES_TASK_NAME = "assembleWebGLResources"
     static String SETUP_TASK_NAME = "setup"
-    static String GROUP = "wdk"
-    static String EXTENSION_NAME = "wdk"
+    static String RESOLVE_PACKAGES_TASK_NAME = "resolvePackages"
+    static String PERFORM_TEST_BUILD_TASK_NAME = "performTestBuild"
+    static String CLEAN_TEST_BUILD_TASK_NAME = "cleanTestBuild"
+    static String SONARQUBE_TASK_NAME = "sonarqube"
+    static String SONARQUBE_BUILD_TASK_NAME = "sonarBuildWDK"
+
     static String ANDROID_RESOURCES_CONFIGURATION_NAME = "android"
     static String IOS_RESOURCES_CONFIGURATION_NAME = "ios"
     static String WEBGL_RESOURCES_CONFIGURATION_NAME = "webgl"
     static String RUNTIME_CONFIGURATION_NAME = "runtime"
 
-    static String PERFORM_TEST_BUILD_TASK_NAME = "performTestBuild"
-    static String CLEAN_TEST_BUILD_TASK_NAME = "cleanTestBuild"
     static String MOVE_EDITOR_DEPENDENCIES = "moveEditorDependencies"
     static String UN_MOVE_EDITOR_DEPENDENCIES = "unMoveEditorDependencies"
-    static String SONARQUBE_TASK_NAME = "sonarqube"
-    static String SONARQUBE_BUILD_TASK_NAME = "sonarBuildWDK"
 
     private final FileResolver fileResolver
     private final Instantiator instantiator
@@ -99,8 +102,6 @@ class WdkUnityPlugin implements Plugin<Project> {
         createTestBuildTasks(project, extension)
         configureSonarqubeTasks(project)
     }
-
-
 
     private static void configureExtension(Project project, WdkPluginExtension extension) {
         UnityPluginExtension unity = project.extensions.getByType(UnityPluginExtension)
@@ -162,42 +163,70 @@ class WdkUnityPlugin implements Plugin<Project> {
         Configuration webglResources = project.configurations[WEBGL_RESOURCES_CONFIGURATION_NAME]
 
         def iOSResourceCopy = project.tasks.register("assembleIOSResources", DefaultResourceCopyTask,
-                { t ->
-                    t.description = "gathers all additional iOS files into the Plugins/iOS directory of the unity project"
-                    t.dependsOn(iOSResources)
-                    t.resources = iOSResources
-                    t.doLast(new IOSResourceCopyAction())
-                })
+            { t ->
+                t.description = "gathers all additional iOS files into the Plugins/iOS directory of the unity project"
+                t.dependsOn(iOSResources)
+                t.resources = iOSResources
+                t.doLast(new IOSResourceCopyAction())
+            })
 
         def androidResourceCopy = project.tasks.register("assembleAndroidResources", DefaultResourceCopyTask,
-                { t ->
-                    t.description = "gathers all *.jar and AndroidManifest.xml files into the Plugins/Android directory of the unity project"
-                    t.dependsOn(androidResources)
-                    t.resources androidResources
-                    t.doLast(new AndroidResourceCopyAction())
-                })
+            { t ->
+                t.description = "gathers all *.jar and AndroidManifest.xml files into the Plugins/Android directory of the unity project"
+                t.dependsOn(androidResources)
+                t.resources androidResources
+                t.doLast(new AndroidResourceCopyAction())
+            })
 
         def webglResourceCopy = project.tasks.register("assembleWebGLResources", DefaultResourceCopyTask,
-                { t ->
-                    t.description = "gathers all webgl related files into the Plugins/webGL directory of the unity project"
-                    t.dependsOn(webglResources)
-                    t.resources webglResources
-                    t.doLast(new WebGLResourceCopyAction())
-                })
+            { t ->
+                t.description = "gathers all webgl related files into the Plugins/webGL directory of the unity project"
+                t.dependsOn(webglResources)
+                t.resources webglResources
+                t.doLast(new WebGLResourceCopyAction())
+            })
 
         def assembleTask = project.tasks[ASSEMBLE_RESOURCES_TASK_NAME]
         assembleTask.dependsOn iOSResourceCopy, androidResourceCopy, webglResourceCopy
     }
 
     private static void configureUnityTaskDependencies(Project project) {
-        if (project.pluginManager.hasPlugin("net.wooga.unity")) {
-            project.tasks.withType(UnityTask, new Action<UnityTask>() {
-                @Override
-                void execute(UnityTask task) {
-                    task.dependsOn project.tasks[SETUP_TASK_NAME]
+
+        // We declare a lifecycle-like task that we can use to control how the unity project is setup;
+        // this can be used in downstream projects
+        def setupTask = project.tasks.named(SETUP_TASK_NAME)
+
+        // We want to ensure that the unity project's packages are resolved
+        // if the setup task is executed by itself, since if ANY other unity task is invoked, we need not do this
+        def resolvePackages = project.tasks.register(RESOLVE_PACKAGES_TASK_NAME, UnityTask) {
+            it.group = GROUP
+            it.batchMode.set(true)
+            it.onlyIf {
+                def unityTasks = project.gradle.taskGraph.allTasks.findAll({
+                    Task t ->
+                        t instanceof UnityTask && !(t instanceof Activate) && !(t instanceof ReturnLicense)
+                })
+                def shouldExecute = unityTasks.size() == 1
+                if (!shouldExecute) {
+                    logger.info("Will be skipped since there's more than one Unity task present [${unityTasks}]")
                 }
-            })
+                shouldExecute
+            }
         }
+        setupTask.configure({
+            it.dependsOn resolvePackages
+        })
+
+        // Make every other Unity task depend on the setup task defined by this plugin
+        project.tasks.withType(UnityTask, new Action<UnityTask>() {
+            @Override
+            void execute(UnityTask task) {
+                if (task.name != RESOLVE_PACKAGES_TASK_NAME
+                    && !(task instanceof Activate)) {
+                    task.dependsOn setupTask
+                }
+            }
+        })
     }
 
     static void createTestBuildTasks(final Project project, final WdkPluginExtension extension) {
