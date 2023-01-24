@@ -31,6 +31,67 @@ class WdkTestBuildSpec extends ProjectSpec {
     }
 
     @Unroll
+    def "generates task :#taskName when upm package 'com.wooga.atlas-build-tools' is available"() {
+        given: "project manifest file with dependency to atlas-build-tools"
+        File manifestFile = new File(projectDir,"Packages/manifest.json")
+        manifestFile.parentFile.mkdirs()
+        manifestFile << """
+        {
+            "dependencies": {
+                "com.wooga.atlas-build-tools": "1.17.2",
+            }
+        }
+        """.stripIndent()
+
+        when:
+        project.plugins.apply(PLUGIN_NAME)
+
+        then:
+        def task = project.tasks.findByName(taskName)
+        taskType.isInstance(task)
+
+        where:
+        taskName                                                | taskType
+        WdkUnityPlugin.MOVE_EDITOR_DEPENDENCIES                 | DefaultTask
+        WdkUnityPlugin.UN_MOVE_EDITOR_DEPENDENCIES              | DefaultTask
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME             | DefaultTask
+        WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME               | Unity
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "IOS"     | Unity
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "Android" | Unity
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "WebGL"   | Unity
+    }
+
+    @Unroll
+    def "skips generation of task :#taskName when upm package 'com.wooga.atlas-build-tools' is not available"() {
+        given: "project manifest file with dependency to atlas-build-tools"
+        File manifestFile = new File(projectDir,"Packages/manifest.json")
+        manifestFile.parentFile.mkdirs()
+        manifestFile << """
+        {
+            "dependencies": {
+                "com.wooga.some-dependency": "1.17.2",
+            }
+        }
+        """.stripIndent()
+
+        when:
+        project.plugins.apply(PLUGIN_NAME)
+
+        then:
+        !project.tasks.findByName(taskName)
+
+        where:
+        taskName                                                | _
+        WdkUnityPlugin.MOVE_EDITOR_DEPENDENCIES                 | _
+        WdkUnityPlugin.UN_MOVE_EDITOR_DEPENDENCIES              | _
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME             | _
+        WdkUnityPlugin.CLEAN_TEST_BUILD_TASK_NAME               | _
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "IOS"     | _
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "Android" | _
+        WdkUnityPlugin.PERFORM_TEST_BUILD_TASK_NAME + "WebGL"   | _
+    }
+
+    @Unroll
     def "generates task :#taskName when 'AtlasBuildTools' is available"() {
         given: "paket.unity.references file with AtlasBuildTools"
         File reference = new File(projectDir, "paket.unity3d.references")
