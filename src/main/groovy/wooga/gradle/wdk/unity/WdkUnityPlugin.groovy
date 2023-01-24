@@ -17,35 +17,34 @@
 
 package wooga.gradle.wdk.unity
 
-
 import org.apache.commons.io.FileUtils
 import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
-import org.sonarqube.gradle.SonarQubeExtension
-import wooga.gradle.dotnetsonar.DotNetSonarqubePlugin
 import org.gradle.api.internal.file.FileResolver
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.tasks.Delete
-import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.reflect.Instantiator
 import org.gradle.language.base.plugins.LifecycleBasePlugin
+import org.sonarqube.gradle.SonarQubeExtension
+import wooga.gradle.dotnetsonar.DotNetSonarqubePlugin
 import wooga.gradle.unity.UnityPlugin
 import wooga.gradle.unity.UnityPluginExtension
 import wooga.gradle.unity.UnityTask
+import wooga.gradle.unity.models.UnityProjectManifest
 import wooga.gradle.unity.tasks.Activate
 import wooga.gradle.unity.tasks.ReturnLicense
 import wooga.gradle.unity.tasks.Unity
 import wooga.gradle.wdk.unity.actions.AndroidResourceCopyAction
-import wooga.gradle.wdk.unity.config.SonarQubeConfiguration
-import wooga.gradle.wdk.unity.tasks.DefaultResourceCopyTask
 import wooga.gradle.wdk.unity.actions.IOSResourceCopyAction
 import wooga.gradle.wdk.unity.actions.WebGLResourceCopyAction
+import wooga.gradle.wdk.unity.config.SonarQubeConfiguration
+import wooga.gradle.wdk.unity.tasks.DefaultResourceCopyTask
 
 import javax.inject.Inject
 
@@ -92,6 +91,7 @@ class WdkUnityPlugin implements Plugin<Project> {
         project.pluginManager.apply(DotNetSonarqubePlugin.class)
 
         WdkPluginExtension extension = project.extensions.create(WdkPluginExtension, EXTENSION_NAME, DefaultWdkPluginExtension, project)
+        UnityPluginExtension unityPluginExtension = project.extensions.getByType(UnityPluginExtension)
 
         configureExtension(project, extension)
         addLifecycleTasks(project)
@@ -99,7 +99,7 @@ class WdkUnityPlugin implements Plugin<Project> {
         configureCleanObjects(project, extension)
         addResourceCopyTasks(project)
         configureUnityTaskDependencies(project)
-        createTestBuildTasks(project, extension)
+        createTestBuildTasks(project, extension, unityPluginExtension)
         configureSonarqubeTasks(project)
     }
 
@@ -163,28 +163,28 @@ class WdkUnityPlugin implements Plugin<Project> {
         Configuration webglResources = project.configurations[WEBGL_RESOURCES_CONFIGURATION_NAME]
 
         def iOSResourceCopy = project.tasks.register("assembleIOSResources", DefaultResourceCopyTask,
-            { t ->
-                t.description = "gathers all additional iOS files into the Plugins/iOS directory of the unity project"
-                t.dependsOn(iOSResources)
-                t.resources = iOSResources
-                t.doLast(new IOSResourceCopyAction())
-            })
+                { t ->
+                    t.description = "gathers all additional iOS files into the Plugins/iOS directory of the unity project"
+                    t.dependsOn(iOSResources)
+                    t.resources = iOSResources
+                    t.doLast(new IOSResourceCopyAction())
+                })
 
         def androidResourceCopy = project.tasks.register("assembleAndroidResources", DefaultResourceCopyTask,
-            { t ->
-                t.description = "gathers all *.jar and AndroidManifest.xml files into the Plugins/Android directory of the unity project"
-                t.dependsOn(androidResources)
-                t.resources androidResources
-                t.doLast(new AndroidResourceCopyAction())
-            })
+                { t ->
+                    t.description = "gathers all *.jar and AndroidManifest.xml files into the Plugins/Android directory of the unity project"
+                    t.dependsOn(androidResources)
+                    t.resources androidResources
+                    t.doLast(new AndroidResourceCopyAction())
+                })
 
         def webglResourceCopy = project.tasks.register("assembleWebGLResources", DefaultResourceCopyTask,
-            { t ->
-                t.description = "gathers all webgl related files into the Plugins/webGL directory of the unity project"
-                t.dependsOn(webglResources)
-                t.resources webglResources
-                t.doLast(new WebGLResourceCopyAction())
-            })
+                { t ->
+                    t.description = "gathers all webgl related files into the Plugins/webGL directory of the unity project"
+                    t.dependsOn(webglResources)
+                    t.resources webglResources
+                    t.doLast(new WebGLResourceCopyAction())
+                })
 
         def assembleTask = project.tasks[ASSEMBLE_RESOURCES_TASK_NAME]
         assembleTask.dependsOn iOSResourceCopy, androidResourceCopy, webglResourceCopy
@@ -222,17 +222,20 @@ class WdkUnityPlugin implements Plugin<Project> {
             @Override
             void execute(UnityTask task) {
                 if (task.name != RESOLVE_PACKAGES_TASK_NAME
-                    && !(task instanceof Activate)) {
+                        && !(task instanceof Activate)) {
                     task.dependsOn setupTask
                 }
             }
         })
     }
 
-    static void createTestBuildTasks(final Project project, final WdkPluginExtension extension) {
+    static void createTestBuildTasks(final Project project, final WdkPluginExtension extension, final UnityPluginExtension unityPluginExtension) {
         File paketUnity3DReferences = project.file("paket.unity3d.references")
+        File projectManifestFile = unityPluginExtension.projectManifestFile.asFile.getOrNull()
+        def upmManifest = (projectManifestFile && projectManifestFile.exists()) ? UnityProjectManifest.deserialize(projectManifestFile) : null
 
-        if (paketUnity3DReferences.exists() && paketUnity3DReferences.text.contains("Wooga.AtlasBuildTools")) {
+        if ((paketUnity3DReferences.exists() && paketUnity3DReferences.text.contains("Wooga.AtlasBuildTools"))
+                || (upmManifest && upmManifest.getDependencies().containsKey("com.wooga.atlas-build-tools"))) {
 
             List<TaskProvider<Unity>> platformTasks = ["Android", "IOS", "WebGL"].collect({ platform ->
                 String taskName = "performTestBuild${platform}"
