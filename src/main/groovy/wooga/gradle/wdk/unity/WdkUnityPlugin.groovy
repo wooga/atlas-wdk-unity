@@ -38,6 +38,7 @@ import wooga.gradle.unity.UnityPluginExtension
 import wooga.gradle.unity.UnityTask
 import wooga.gradle.unity.models.UnityProjectManifest
 import wooga.gradle.unity.tasks.Activate
+import wooga.gradle.unity.tasks.ProjectManifestTask
 import wooga.gradle.unity.tasks.ReturnLicense
 import wooga.gradle.unity.tasks.Unity
 import wooga.gradle.wdk.unity.actions.AndroidResourceCopyAction
@@ -45,6 +46,7 @@ import wooga.gradle.wdk.unity.actions.IOSResourceCopyAction
 import wooga.gradle.wdk.unity.actions.WebGLResourceCopyAction
 import wooga.gradle.wdk.unity.config.SonarQubeConfiguration
 import wooga.gradle.wdk.unity.tasks.DefaultResourceCopyTask
+import wooga.gradle.wdk.unity.tasks.ResolveUnityPackages
 
 import javax.inject.Inject
 
@@ -98,7 +100,7 @@ class WdkUnityPlugin implements Plugin<Project> {
         createExternalResourcesConfigurations(project)
         configureCleanObjects(project, extension)
         addResourceCopyTasks(project)
-        configureUnityTaskDependencies(project)
+        configureUnityTaskDependencies(project, unityPluginExtension)
         createTestBuildTasks(project, extension, unityPluginExtension)
         configureSonarqubeTasks(project)
     }
@@ -190,7 +192,7 @@ class WdkUnityPlugin implements Plugin<Project> {
         assembleTask.dependsOn iOSResourceCopy, androidResourceCopy, webglResourceCopy
     }
 
-    private static void configureUnityTaskDependencies(Project project) {
+    private static void configureUnityTaskDependencies(Project project, final UnityPluginExtension unityPluginExtension) {
 
         // We declare a lifecycle-like task that we can use to control how the unity project is setup;
         // this can be used in downstream projects
@@ -198,35 +200,41 @@ class WdkUnityPlugin implements Plugin<Project> {
 
         // We want to ensure that the unity project's packages are resolved
         // if the setup task is executed by itself, since if ANY other unity task is invoked, we need not do this
-        def resolvePackages = project.tasks.register(RESOLVE_PACKAGES_TASK_NAME, UnityTask) {
+        def resolvePackages = project.tasks.register(RESOLVE_PACKAGES_TASK_NAME, ResolveUnityPackages) {
             it.group = GROUP
             it.batchMode.set(true)
             it.onlyIf {
                 def unityTasks = project.gradle.taskGraph.allTasks.findAll({
                     Task t ->
-                        t instanceof UnityTask && !(t instanceof Activate) && !(t instanceof ReturnLicense)
+                        t instanceof UnityTask && !(t instanceof Activate) && !(t instanceof ReturnLicense) && !(t.name == RESOLVE_PACKAGES_TASK_NAME)
                 })
-                def shouldExecute = unityTasks.size() == 1
+                def shouldExecute = unityTasks.size() <= 1
                 if (!shouldExecute) {
                     logger.info("Will be skipped since there's more than one Unity task present [${unityTasks}]")
                 }
                 shouldExecute
             }
+            it.manifest.convention(unityPluginExtension.projectManifestFile)
+            it.packageLock.convention(unityPluginExtension.projectLockFile)
         }
         setupTask.configure({
             it.dependsOn resolvePackages
         })
 
-        // Make every other Unity task depend on the setup task defined by this plugin
-        project.tasks.withType(UnityTask, new Action<UnityTask>() {
-            @Override
-            void execute(UnityTask task) {
-                if (task.name != RESOLVE_PACKAGES_TASK_NAME
-                        && !(task instanceof Activate)) {
-                    task.dependsOn setupTask
-                }
+        def resolutionStrategy = project.tasks.named(UnityPlugin.Tasks.setResolutionStrategy.toString())
+        project.tasks.withType(UnityTask).configureEach{
+            if(!(it instanceof Activate || it instanceof ReturnLicense || it instanceof ProjectManifestTask || it.name == UnityPlugin.Tasks.ensureProjectManifest.toString())) {
+                it.dependsOn(resolutionStrategy)
             }
-        })
+        }
+
+        // Make every other Unity task depend on the setup task defined by this plugin
+        project.tasks.withType(UnityTask).configureEach { task ->
+            if (task.name != RESOLVE_PACKAGES_TASK_NAME && task.name && !(task.name == UnityPlugin.Tasks.ensureProjectManifest.name())
+                    && !(task instanceof Activate)) {
+                task.dependsOn setupTask
+            }
+        }
     }
 
     static void createTestBuildTasks(final Project project, final WdkPluginExtension extension, final UnityPluginExtension unityPluginExtension) {
