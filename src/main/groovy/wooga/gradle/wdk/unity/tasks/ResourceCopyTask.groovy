@@ -19,9 +19,11 @@ package wooga.gradle.wdk.unity.tasks
 
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.internal.ConventionMapping
 import org.gradle.api.internal.IConventionAware
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
 
 interface ResourceCopyTask extends Task, IConventionAware {
 
@@ -31,4 +33,8 @@ interface ResourceCopyTask extends Task, IConventionAware {
     void setResources(Configuration resources)
 
     ResourceCopyTask resources(Configuration resources)
+
+    @Internal
+    @Override
+    ConventionMapping getConventionMapping()
 }
