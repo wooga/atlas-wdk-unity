@@ -51,7 +51,7 @@ cveHandler {
 }
 
 dependencies {
-    implementation 'org.apache.maven:maven-artifact:3.8.5'
+    implementation 'org.apache.maven:maven-artifact:3.9.4'
     implementation "net.wooga.gradle:dotnet-sonarqube:[1,2["
     implementation "net.wooga.gradle:unity:[4,5["
     implementation "commons-io:commons-io:2.11.0"
