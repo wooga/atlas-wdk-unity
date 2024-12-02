@@ -228,6 +228,11 @@ class WdkUnityPlugin implements Plugin<Project> {
             }
         }
 
+        def cleanupUnityFiles = project.tasks.named(UnityPlugin.Tasks.cleanupDanglingUnityFiles.toString())
+        project.tasks.withType(UnityTask).configureEach {
+            it.dependsOn(cleanupUnityFiles)
+        }
+
         // Make every other Unity task depend on the setup task defined by this plugin
         project.tasks.withType(UnityTask).configureEach { task ->
             if (task.name != RESOLVE_PACKAGES_TASK_NAME && task.name && !(task.name == UnityPlugin.Tasks.ensureProjectManifest.name())

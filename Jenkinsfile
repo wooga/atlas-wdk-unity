@@ -5,5 +5,7 @@ withCredentials([
                     string(credentialsId: 'atlas_plugins_sonar_token', variable: 'sonar_token'),
                     string(credentialsId: 'snyk-wooga-frontend-integration-token', variable: 'SNYK_TOKEN')
                  ]) {
-    buildGradlePlugin platforms: ['macos', 'windows', 'linux'], sonarToken: sonar_token
+    buildGradlePlugin platforms: ['macos', 'windows', 'linux'],
+                        sonarToken: sonar_token,
+                        dockerArgs: [ dockerArgs: ['-v', '/home/jenkins_agent/.gradle:/home/jenkins_agent/.gradle'] ]
 }
