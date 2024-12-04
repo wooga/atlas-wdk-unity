@@ -19,12 +19,14 @@ package wooga.gradle.wdk.unity
 
 import nebula.test.ProjectSpec
 import org.gradle.api.DefaultTask
+import org.gradle.api.Task
 import spock.lang.Unroll
 import wooga.gradle.dotnetsonar.DotNetSonarqubePlugin
 import wooga.gradle.dotnetsonar.SonarScannerExtension
 import wooga.gradle.dotnetsonar.tasks.BuildSolution
 import wooga.gradle.unity.UnityPlugin
 import wooga.gradle.unity.UnityPluginExtension
+import wooga.gradle.unity.UnityTask
 import wooga.gradle.wdk.unity.tasks.ResourceCopyTask
 
 class WdkUnityPluginSpec extends ProjectSpec {
@@ -66,6 +68,23 @@ class WdkUnityPluginSpec extends ProjectSpec {
         WdkUnityPlugin.SETUP_TASK_NAME                      | DefaultTask
         WdkUnityPlugin.SONARQUBE_BUILD_TASK_NAME            | BuildSolution
         WdkUnityPlugin.SONARQUBE_TASK_NAME                  | DefaultTask
+    }
+
+    def 'any UnityTask depends on #dependencies' () {
+        given:
+        assert !project.plugins.hasPlugin(PLUGIN_NAME)
+
+        when:
+        project.plugins.apply(PLUGIN_NAME)
+        and:
+        def anyUnityTask = project.tasks.register("anyUnityTask", UnityTask).get()
+
+        then:
+        anyUnityTask.getTaskDependencies().getDependencies(anyUnityTask).any { t ->
+            dependencies.contains(t.name.replaceFirst(":",""))
+        }
+        where:
+        dependencies = [UnityPlugin.Tasks.cleanupDanglingUnityFiles.toString()]
     }
 
     @Unroll
